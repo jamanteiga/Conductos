@@ -2,7 +2,7 @@
   "name": "Conductos HVAC",
   "short_name": "Conductos",
   "description": "Dimensionado de conductos HVAC por rozamiento constante",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f2f2f7",
   "theme_color": "#f2f2f7",
