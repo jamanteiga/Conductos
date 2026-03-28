@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f2f2f7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Conductos">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Conductos HVAC</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-logo">🌬️ <span>Conductos HVAC</span></div>
+  <div class="hdr-sub">Rozamiento cte.</div>
+  <div class="hdr-r" id="hdrR">— Pa/m</div>
+</header>
+
+<!-- PAGE: CÁLCULO -->
+<div class="page active" data-page="calculo">
+
+  <!-- Tipo de sección -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="type-toggle">
+      <button class="tt-btn active" id="btnCirc" onclick="setTipo('circular')">
+        <span class="tt-icon">⭕</span><span>Circular</span>
+      </button>
+      <button class="tt-btn" id="btnRect" onclick="setTipo('rectangular')">
+        <span class="tt-icon">▭</span><span>Rectangular</span>
+      </button>
+      <button class="tt-btn" id="btnOval" onclick="setTipo('oval')">
+        <span class="tt-icon">🥚</span><span>Oval</span>
+      </button>
+      <button class="tt-btn" id="btnSpiral" onclick="setTipo('spiral')">
+        <span class="tt-icon">🌀</span><span>Espiral</span>
+      </button>
+    </div>
+
+    <div class="sl-g">
+      <div class="sl-r">
+        <div class="sl-h">
+          <span class="sl-l">Caudal Q</span>
+          <span class="sl-v" id="vQ" style="color:var(--ac)">— m³/h</span>
+        </div>
+        <input type="range" id="slQ" min="1" max="3" step="0.01" value="1.778">
+      </div>
+      <div class="sl-r">
+        <div class="sl-h">
+          <span class="sl-l">Rozamiento objetivo R</span>
+          <span class="sl-v" id="vR" style="color:var(--pu)">— Pa/m</span>
+        </div>
+        <input type="range" id="slR" min="-1" max="1" step="0.01" value="-0.097">
+      </div>
+      <div class="sl-r" id="arRow" style="display:none">
+        <div class="sl-h">
+          <span class="sl-l" id="arLabel">Relación de aspecto a/b</span>
+          <span class="sl-v" id="vAR" style="color:var(--or)">2.0 : 1</span>
+        </div>
+        <input type="range" id="slAR" min="1.25" max="4" step="0.05" value="2.0">
+      </div>
+      <div id="spiralInfo" style="display:none;padding:8px 16px 12px;font-size:12px;color:var(--mu);line-height:1.6;background:rgba(88,86,214,0.06);border-top:1px solid var(--bd2)">
+        🌀 <strong style="color:var(--pu)">Conducto espiral circular</strong> — Rugosidad efectiva 0.05 mm · Factor costura ×1.02 (ASHRAE) · Series comerciales cada 25–50 mm
+      </div>
+    </div>
+  </div>
+
+  <!-- Sección transversal -->
+  <div class="card" style="margin-bottom:12px">
+    <canvas id="sectionCanvas"></canvas>
+  </div>
+
+  <!-- Resultados rápidos -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="rg">
+      <div class="rc">
+        <div class="rl" id="dimLabel">Diámetro calc.</div>
+        <div class="rv" id="rDim">—</div>
+        <div class="ru" id="dimUnit">mm</div>
+      </div>
+      <div class="rc">
+        <div class="rl" id="normLabel">Diámetro normaliz.</div>
+        <div class="rv" id="rNorm" style="color:var(--ac)">—</div>
+        <div class="ru" id="normUnit">mm (serie)</div>
+      </div>
+      <div class="rc" style="border-top:1px solid var(--bd2)">
+        <div class="rl">Velocidad</div>
+        <div class="rv" id="rVel">—</div>
+        <div class="ru">m/s</div>
+      </div>
+      <div class="rc" style="border-top:1px solid var(--bd2)">
+        <div class="rl">R real (normaliz.)</div>
+        <div class="rv" id="rRreal" style="color:var(--pu)">—</div>
+        <div class="ru">Pa/m</div>
+      </div>
+      <div class="rc" style="border-top:1px solid var(--bd2)">
+        <div class="rl">Reynolds Re</div>
+        <div class="rv" id="rRe" style="font-size:14px">—</div>
+        <div class="ru">—</div>
+      </div>
+      <div class="rc" style="border-top:1px solid var(--bd2)">
+        <div class="rl">Velocidad</div>
+        <div class="rv" id="velBadge" style="font-size:13px">—</div>
+        <div class="ru">&nbsp;</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- PAGE: ÁBACO -->
+<div class="page" data-page="abaco">
+  <div class="card" style="margin-bottom:12px">
+    <canvas id="abacoCanvas"></canvas>
+    <div style="padding:7px 14px;font-size:11px;color:var(--mu);text-align:center;background:var(--sf2);border-top:1px solid var(--bd2)">
+      Toca el ábaco para leer R y D · Líneas = caudales constantes
+    </div>
+  </div>
+  <!-- Leyenda caudales -->
+  <div class="card" style="margin-bottom:12px">
+    <div style="padding:12px 16px">
+      <div class="sec" style="margin-bottom:10px">Líneas iso-caudal</div>
+      <div id="abacoLegend" style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: RED -->
+<div class="page" data-page="red">
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button onclick="addTramo()" style="flex:1;background:var(--ac);color:#fff;border:none;border-radius:var(--rsm);padding:11px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">＋ Añadir tramo</button>
+    <button onclick="clearRed()" style="background:#fff0f0;color:var(--rd);border:1px solid #fbb;border-radius:var(--rsm);padding:11px 14px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">✕ Limpiar</button>
+  </div>
+
+  <div id="redTramos"></div>
+
+  <!-- Resumen red -->
+  <div class="sec">Resumen de la red</div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="rg">
+      <div class="rc">
+        <div class="rl">ΔP total</div>
+        <div class="rv" id="redDP" style="color:var(--rd)">—</div>
+        <div class="ru">Pa</div>
+      </div>
+      <div class="rc">
+        <div class="rl">Tramo crítico</div>
+        <div class="rv" id="redCrit" style="font-size:14px;color:var(--ac)">—</div>
+        <div class="ru">mayor pérdida</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px;overflow-x:auto">
+    <table class="red-tbl">
+      <thead><tr>
+        <th>#</th><th>Q (m³/h)</th><th>Dim.</th><th>v (m/s)</th><th>L (m)</th><th>ΔP fric</th><th>ΔP sing</th><th>ΔP tot</th>
+      </tr></thead>
+      <tbody id="redBody"><tr><td colspan="8" style="text-align:center;color:var(--mu);padding:18px">Añade tramos a la red</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Singularidades activas -->
+  <div class="sec">Singularidades en el tramo activo</div>
+  <div class="card" style="margin-bottom:14px" id="fittingsCard">
+    <div style="padding:14px;color:var(--mu);font-size:13px;text-align:center">Añade un tramo primero</div>
+  </div>
+</div>
+
+<!-- PAGE: CONFIG -->
+<div class="page" data-page="config">
+
+  <div class="sec">Material del conducto</div>
+  <div class="card" style="margin-bottom:14px;padding:14px 16px">
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Material</div>
+      <select class="ios-sel" id="selMat" onchange="onMat()"></select>
+    </div>
+    <div id="epsCustomRow" style="display:none;margin-top:10px">
+      <div style="font-size:11px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Rugosidad ε [mm]</div>
+      <input class="ios-inp" type="number" id="epsInp" step="0.01" value="0.09" oninput="onMat()">
+    </div>
+    <div style="font-size:12px;color:var(--mu);margin-top:8px" id="matDesc">—</div>
+  </div>
+
+  <div class="sec">Condiciones del aire</div>
+  <div class="card" style="margin-bottom:14px;padding:14px 16px">
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Condición</div>
+      <select class="ios-sel" id="selAir" onchange="onAir()"></select>
+    </div>
+    <div id="airCustom" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <div>
+          <div style="font-size:11px;color:var(--mu);font-weight:600;text-transform:uppercase;margin-bottom:5px">ρ [kg/m³]</div>
+          <input class="ios-inp" id="rhoInp" type="number" step="0.01" value="1.204" oninput="update()">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--mu);font-weight:600;text-transform:uppercase;margin-bottom:5px">ν [m²/s]</div>
+          <input class="ios-inp" id="nuInp" type="number" step="1e-7" value="1.516e-5" oninput="update()">
+        </div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--mu);margin-top:8px" id="airDesc">ρ = 1.204 kg/m³  ·  ν = 1.516×10⁻⁵ m²/s</div>
+  </div>
+
+  <div class="sec">Velocidades recomendadas ASHRAE</div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ir"><span class="ik">Impulsión baja vel.</span><span class="iv">3 – 8 m/s</span></div>
+    <div class="ir"><span class="ik">Impulsión media vel.</span><span class="iv">8 – 14 m/s</span></div>
+    <div class="ir"><span class="ik">Impulsión alta vel.</span><span class="iv">14 – 20 m/s</span></div>
+    <div class="ir"><span class="ik">Retorno / extracción</span><span class="iv">3 – 8 m/s</span></div>
+    <div class="ir"><span class="ik">Plenum / caja mezcla</span><span class="iv">1 – 4 m/s</span></div>
+  </div>
+
+  <div class="sec">Rozamiento recomendado</div>
+  <div class="card" style="margin-bottom:24px">
+    <div class="ir"><span class="ik">Residencial confort</span><span class="iv">0.6 Pa/m</span></div>
+    <div class="ir"><span class="ik">Comercial confort</span><span class="iv">0.8 Pa/m</span></div>
+    <div class="ir"><span class="ik">Oficinas / hospitalario</span><span class="iv">1.0 Pa/m</span></div>
+    <div class="ir"><span class="ik">Industrial general</span><span class="iv">1.5 Pa/m</span></div>
+    <div class="ir"><span class="ik">Industrial alta vel.</span><span class="iv">2.5 Pa/m</span></div>
+  </div>
+</div>
+
+<nav class="nav">
+  <button class="nb active" data-nav="calculo"><span class="ico">🔧</span><span>Cálculo</span></button>
+  <button class="nb" data-nav="abaco"><span class="ico">📊</span><span>Ábaco</span></button>
+  <button class="nb" data-nav="red"><span class="ico">🗺</span><span>Red</span></button>
+  <button class="nb" data-nav="config"><span class="ico">⚙️</span><span>Config</span></button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { sizeCircular, sizeRectangular, sizeOval, sizeSpiral,
+         normalizeCirc, normalizeRect, normalizeOval, normalizeSpiral,
+         calcRed, MATERIALS, AIR_CONDITIONS, FITTINGS,
+         abacoLines, fittingLoss, areaCirc, areaOval,
+         SPIRAL_SEAM_FACTOR } from './js/engine.js';
+import { AbacoChart, drawSection } from './js/chart.js';
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let tipo   = 'circular';
+let Q      = 0.600;        // m³/s  (= 2160 m³/h, slider log10=1.778)
+let R      = 0.8;          // Pa/m
+let ar     = 2.0;
+let eps    = 0.09e-3;      // m
+let rho    = 1.204;
+let nu     = 1.516e-5;
+let state  = null;
+let red    = [];           // tramos en la red
+let activeTramo = null;
+
+// ── CANVAS ────────────────────────────────────────────────────────────────────
+const abacoCanvas   = document.getElementById('abacoCanvas');
+const sectionCanvas = document.getElementById('sectionCanvas');
+const abaco = new AbacoChart(abacoCanvas, ({ R: Rc, D: Dc }) => {
+  // Actualizar slider R
+  R = Rc;
+  document.getElementById('slR').value = Math.log10(R);
+  update();
+  toast(`📍 R=${Rc.toFixed(2)} Pa/m · D=${(Dc*1000).toFixed(0)} mm`);
+});
+
+// ── SLIDERS ───────────────────────────────────────────────────────────────────
+const slQ  = document.getElementById('slQ');
+const slR  = document.getElementById('slR');
+const slAR = document.getElementById('slAR');
+
+function track(sl, color) {
+  const pct = (sl.value - sl.min) / (sl.max - sl.min) * 100;
+  sl.style.background = `linear-gradient(to right,${color} ${pct}%,#e5e5ea ${pct}%)`;
+}
+
+function syncSliders() {
+  Q  = Math.pow(10, parseFloat(slQ.value));
+  R  = Math.pow(10, parseFloat(slR.value));
+  ar = parseFloat(slAR.value);
+  document.getElementById('vQ').textContent  = `${(Q*3600).toFixed(0)} m³/h  (${Q.toFixed(3)} m³/s)`;
+  document.getElementById('vR').textContent  = `${R.toFixed(3)} Pa/m`;
+  document.getElementById('vAR').textContent = `${ar.toFixed(1)} : 1`;
+  track(slQ, '#007aff'); track(slR, '#5856d6'); track(slAR, '#ff9500');
+  document.getElementById('hdrR').textContent = `${R.toFixed(2)} Pa/m`;
+}
+
+slQ.addEventListener('input',  () => { syncSliders(); update(); });
+slR.addEventListener('input',  () => { syncSliders(); update(); });
+slAR.addEventListener('input', () => { syncSliders(); update(); });
+
+// ── TIPO ──────────────────────────────────────────────────────────────────────
+window.setTipo = function(t) {
+  tipo = t;
+  ['Circ','Rect','Oval','Spiral'].forEach(id => {
+    const btn = document.getElementById(`btn${id}`);
+    if (btn) btn.classList.toggle('active', t === id.toLowerCase());
+  });
+  const hasAR = t === 'rectangular' || t === 'oval';
+  document.getElementById('arRow').style.display = hasAR ? 'block' : 'none';
+  document.getElementById('spiralInfo').style.display = t === 'spiral' ? 'block' : 'none';
+  const arLabel = document.getElementById('arLabel');
+  if (arLabel) arLabel.textContent = t === 'oval' ? 'Relación de aspecto a/b (oval)' : 'Relación de aspecto a/b';
+  update();
+};
+
+// ── UPDATE ────────────────────────────────────────────────────────────────────
+const fmt = (n, d=2) => n != null && isFinite(n) ? n.toFixed(d) : '—';
+
+function velBadge(v) {
+  if (v < 3)  return `<span class="vel-badge vel-lo">⬇ ${fmt(v)} m/s  baja</span>`;
+  if (v > 14) return `<span class="vel-badge vel-hi">⬆ ${fmt(v)} m/s  alta</span>`;
+  return              `<span class="vel-badge vel-ok">✓ ${fmt(v)} m/s  ok</span>`;
+}
+
+function update() {
+  if (tipo === 'circular') {
+    state = sizeCircular(Q, R, eps, rho, nu);
+    const Dn = normalizeCirc(state.D);
+    const vn = Q / areaCirc(Dn);
+    const ren = vn*Dn/nu;
+    import('./js/engine.js').then(({ frictionFactor }) => {
+      const fn = frictionFactor(ren, eps/Dn);
+      document.getElementById('rRreal').textContent = fmt(fn/Dn*rho*vn*vn/2, 3);
+    });
+    document.getElementById('dimLabel').textContent  = 'Diámetro calculado';
+    document.getElementById('normLabel').textContent = 'Diámetro normalizado';
+    document.getElementById('dimUnit').textContent   = 'mm';
+    document.getElementById('normUnit').textContent  = 'mm (serie comercial)';
+    document.getElementById('rDim').textContent  = `${(state.D*1000).toFixed(1)}`;
+    document.getElementById('rNorm').textContent = `${(Dn*1000).toFixed(0)}`;
+    document.getElementById('rVel').textContent  = fmt(vn, 2);
+    document.getElementById('rRe').textContent   = ren.toExponential(2);
+    document.getElementById('velBadge').innerHTML = velBadge(vn);
+    drawSection(sectionCanvas, { Dnorm: Dn }, 'circular');
+    abaco.draw({ R, D: Dn });
+
+  } else if (tipo === 'spiral') {
+    const epsSpiral = 0.05e-3;
+    state = sizeSpiral(Q, R, epsSpiral, rho, nu);
+    const Dn = normalizeSpiral(state.D);
+    const vn = Q / areaCirc(Dn);
+    const ren = vn*Dn/nu;
+    import('./js/engine.js').then(({ frictionFactor }) => {
+      const fn = frictionFactor(ren, epsSpiral/Dn);
+      document.getElementById('rRreal').textContent = fmt(fn/Dn*rho*vn*vn/2*SPIRAL_SEAM_FACTOR, 3);
+    });
+    document.getElementById('dimLabel').textContent  = 'Diámetro calculado';
+    document.getElementById('normLabel').textContent = 'Diámetro normaliz. 🌀';
+    document.getElementById('dimUnit').textContent   = 'mm';
+    document.getElementById('normUnit').textContent  = 'mm (serie espiral)';
+    document.getElementById('rDim').textContent  = `${(state.D*1000).toFixed(1)}`;
+    document.getElementById('rNorm').textContent = `${(Dn*1000).toFixed(0)}`;
+    document.getElementById('rVel').textContent  = fmt(vn, 2);
+    document.getElementById('rRe').textContent   = ren.toExponential(2);
+    document.getElementById('velBadge').innerHTML = velBadge(vn);
+    drawSection(sectionCanvas, { Dnorm: Dn }, 'spiral');
+    abaco.draw({ R, D: Dn });
+
+  } else if (tipo === 'oval') {
+    state = sizeOval(Q, R, eps, ar, rho, nu);
+    const norm = normalizeOval(state.a, state.b);
+    const AN = areaOval(norm.a, norm.b);
+    const vn = Q / AN;
+    import('./js/engine.js').then(({ frictionFactor, dhOval }) => {
+      const DhN = dhOval(norm.a, norm.b);
+      const ren = vn*DhN/nu;
+      const fn = frictionFactor(ren, eps/DhN);
+      document.getElementById('rRreal').textContent = fmt(fn/DhN*rho*vn*vn/2, 3);
+      document.getElementById('rRe').textContent    = ren.toExponential(2);
+    });
+    document.getElementById('dimLabel').textContent  = 'Dimensiones calc. 🥚';
+    document.getElementById('normLabel').textContent = 'Dimensiones normaliz.';
+    document.getElementById('dimUnit').textContent   = 'mm × mm (a × b)';
+    document.getElementById('normUnit').textContent  = 'mm × mm (serie SMACNA)';
+    document.getElementById('rDim').textContent  = `${(state.a*1000).toFixed(0)}×${(state.b*1000).toFixed(0)}`;
+    document.getElementById('rNorm').textContent = `${(norm.a*1000).toFixed(0)}×${(norm.b*1000).toFixed(0)}`;
+    document.getElementById('rVel').textContent  = fmt(vn, 2);
+    document.getElementById('rRe').textContent   = '…';
+    document.getElementById('velBadge').innerHTML = velBadge(vn);
+    drawSection(sectionCanvas, { aNorm: norm.a, bNorm: norm.b }, 'oval');
+    abaco.draw({ R, D: state.Deq });
+
+  } else {
+    // rectangular
+    state = sizeRectangular(Q, R, eps, ar, rho, nu);
+    const norm = normalizeRect(state.a, state.b);
+    const AN = norm.a * norm.b;
+    const vn = Q / AN;
+    import('./js/engine.js').then(({ frictionFactor, dhRect }) => {
+      const DhN = dhRect(norm.a, norm.b);
+      const ren = vn*DhN/nu;
+      const fn = frictionFactor(ren, eps/DhN);
+      document.getElementById('rRreal').textContent = fmt(fn/DhN*rho*vn*vn/2, 3);
+      document.getElementById('rRe').textContent    = ren.toExponential(2);
+    });
+    document.getElementById('dimLabel').textContent  = 'Dimensiones calc.';
+    document.getElementById('normLabel').textContent = 'Dimensiones normal.';
+    document.getElementById('dimUnit').textContent   = 'mm × mm';
+    document.getElementById('normUnit').textContent  = 'mm × mm (serie)';
+    document.getElementById('rDim').textContent  = `${(state.a*1000).toFixed(0)}×${(state.b*1000).toFixed(0)}`;
+    document.getElementById('rNorm').textContent = `${(norm.a*1000).toFixed(0)}×${(norm.b*1000).toFixed(0)}`;
+    document.getElementById('rVel').textContent  = fmt(vn, 2);
+    document.getElementById('rRe').textContent   = state.Re.toExponential(2);
+    document.getElementById('rRreal').textContent = fmt(state.RNorm || state.R_calc, 3);
+    document.getElementById('velBadge').innerHTML = velBadge(vn);
+    drawSection(sectionCanvas, { aNorm: norm.a, bNorm: norm.b }, 'rectangular');
+    abaco.draw({ R, D: state.Deq });
+  }
+}
+
+// ── ÁBACO LINES ───────────────────────────────────────────────────────────────
+function buildAbaco() {
+  import('./js/engine.js').then(({ abacoLines: al }) => {
+    const lines = al(eps, rho, nu);
+    abaco.setLines(lines);
+    abaco.draw(null);
+    // Legend
+    const colors = ['#007aff','#5856d6','#34c759','#ff9500','#ff3b30',
+                    '#30b0c7','#af52de','#ffd60a','#8e8e93','#ff6b35','#2c3e50'];
+    document.getElementById('abacoLegend').innerHTML = lines.map((l,i) =>
+      `<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:20px;height:3px;background:${colors[i%colors.length]};display:inline-block;border-radius:2px"></span><span style="font-size:11px;color:var(--tx2)">${l.label}</span></span>`
+    ).join('');
+  });
+}
+
+// ── RED DE TRAMOS ─────────────────────────────────────────────────────────────
+let tramoCount = 0;
+
+window.addTramo = function() {
+  tramoCount++;
+  const t = {
+    id: tramoCount, Q, L: 10, tipo, ar,
+    fittings: [], label: `Tramo ${tramoCount}`
+  };
+  red.push(t);
+  activeTramo = t.id;
+  renderRed();
+  toast(`✓ Tramo ${tramoCount} añadido`);
+};
+
+window.clearRed = function() { red = []; activeTramo = null; tramoCount = 0; renderRed(); };
+
+window.removeTramo = function(id) {
+  red = red.filter(t => t.id !== id);
+  if (activeTramo === id) activeTramo = red.length ? red[red.length-1].id : null;
+  renderRed();
+};
+
+window.addFitting = function(zeta, name) {
+  const t = red.find(t => t.id === activeTramo);
+  if (!t) return;
+  t.fittings.push({ name, zeta });
+  renderRed();
+};
+
+window.removeFitting = function(ti, fi) {
+  const t = red.find(t => t.id === ti);
+  if (t) { t.fittings.splice(fi, 1); renderRed(); }
+};
+
+window.setActive = function(id) { activeTramo = id; renderRed(); };
+window.updateTramoL = function(id, val) {
+  const t = red.find(t => t.id === id);
+  if (t) { t.L = parseFloat(val) || 1; renderRed(); }
+};
+
+function renderRed() {
+  if (!red.length) {
+    document.getElementById('redTramos').innerHTML = '';
+    document.getElementById('redBody').innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--mu);padding:18px">Añade tramos a la red</td></tr>';
+    document.getElementById('redDP').textContent  = '—';
+    document.getElementById('redCrit').textContent = '—';
+    document.getElementById('fittingsCard').innerHTML = '<div style="padding:14px;color:var(--mu);font-size:13px;text-align:center">Añade un tramo primero</div>';
+    return;
+  }
+
+  // Calculate all
+  const results = red.map(t => {
+    let dim, vn, dPfric, dPsing;
+    if (t.tipo === 'circular' || t.tipo === 'spiral') {
+      const epsEff = t.tipo === 'spiral' ? 0.05e-3 : eps;
+      const g = t.tipo === 'spiral' ? sizeSpiral(t.Q, R, epsEff, rho, nu) : sizeCircular(t.Q, R, epsEff, rho, nu);
+      const Dn = t.tipo === 'spiral' ? normalizeSpiral(g.D) : normalizeCirc(g.D);
+      vn = t.Q / areaCirc(Dn);
+      const sf = t.tipo === 'spiral' ? SPIRAL_SEAM_FACTOR : 1;
+      dPfric = R * sf * t.L;
+      dPsing = t.fittings.reduce((s,f) => s + fittingLoss(f.zeta, vn, rho), 0);
+      dim = `${t.tipo === 'spiral' ? '🌀' : ''}Ø${(Dn*1000).toFixed(0)}`;
+    } else if (t.tipo === 'oval') {
+      const g = sizeOval(t.Q, R, eps, t.ar||2, rho, nu);
+      const norm = normalizeOval(g.a, g.b);
+      vn = t.Q / areaOval(norm.a, norm.b);
+      dPfric = R * t.L;
+      dPsing = t.fittings.reduce((s,f) => s + fittingLoss(f.zeta, vn, rho), 0);
+      dim = `🥚${(norm.a*1000).toFixed(0)}×${(norm.b*1000).toFixed(0)}`;
+    } else {
+      const g = sizeRectangular(t.Q, R, eps, t.ar||2, rho, nu);
+      const norm = normalizeRect(g.a, g.b);
+      vn = t.Q / (norm.a * norm.b);
+      dPfric = R * t.L;
+      dPsing = t.fittings.reduce((s,f) => s + fittingLoss(f.zeta, vn, rho), 0);
+      dim = `${(norm.a*1000).toFixed(0)}×${(norm.b*1000).toFixed(0)}`;
+    }
+    return { ...t, vn, dPfric, dPsing, dP: dPfric+dPsing, dim };
+  });
+
+  const totalDP = results.reduce((s,r) => s+r.dP, 0);
+  const maxDP   = Math.max(...results.map(r=>r.dP));
+  const crit    = results.find(r=>r.dP===maxDP);
+
+  document.getElementById('redDP').textContent   = totalDP.toFixed(1);
+  document.getElementById('redCrit').textContent = crit ? `Tramo ${crit.id}` : '—';
+
+  // Table
+  document.getElementById('redBody').innerHTML = results.map(r => `
+    <tr style="${r.id===activeTramo?'background:#e8f2ff':''}" onclick="setActive(${r.id})">
+      <td style="font-weight:600;color:var(--ac)">${r.id}</td>
+      <td>${(r.Q*3600).toFixed(0)}</td>
+      <td>${r.dim}</td>
+      <td>${r.vn.toFixed(2)}</td>
+      <td><input type="number" value="${r.L}" min="0.1" step="0.5" style="width:50px;border:none;background:transparent;font-family:'DM Mono',monospace;font-size:12px;color:var(--tx)" onchange="updateTramoL(${r.id},this.value)"></td>
+      <td>${r.dPfric.toFixed(1)}</td>
+      <td>${r.dPsing.toFixed(1)}</td>
+      <td style="font-weight:700;color:${r.dP===maxDP?'var(--rd)':'var(--tx)'}">${r.dP.toFixed(1)}</td>
+    </tr>
+  `).join('');
+
+  // Tramos list
+  document.getElementById('redTramos').innerHTML = results.map(r => `
+    <div class="card" style="margin-bottom:10px;border:${r.id===activeTramo?'2px solid var(--ac)':'1px solid transparent'}" onclick="setActive(${r.id})">
+      <div style="display:flex;align-items:center;padding:12px 14px;gap:10px">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:14px">Tramo ${r.id} — ${r.dim} mm</div>
+          <div style="font-size:12px;color:var(--mu);margin-top:2px">${(r.Q*3600).toFixed(0)} m³/h · v=${r.vn.toFixed(2)} m/s · L=${r.L}m</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:700;font-size:15px;font-family:'DM Mono',monospace;color:var(--rd)">${r.dP.toFixed(1)} Pa</div>
+          <div style="font-size:11px;color:var(--mu)">${r.fittings.length} singul.</div>
+        </div>
+        <button onclick="event.stopPropagation();removeTramo(${r.id})" style="background:#fff0f0;color:var(--rd);border:none;border-radius:7px;padding:6px 10px;cursor:pointer;font-size:14px">✕</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Fittings for active tramo
+  const at = results.find(r => r.id === activeTramo);
+  if (at) {
+    const fCard = document.getElementById('fittingsCard');
+    fCard.innerHTML = `
+      ${at.fittings.length ? at.fittings.map((f,i) => `
+        <div class="fit-row">
+          <div class="fit-name">${f.name}</div>
+          <div class="fit-zeta">ζ=${f.zeta}</div>
+          <div class="fit-dp">${fittingLoss(f.zeta, at.vn, rho).toFixed(1)} Pa</div>
+          <button class="fit-del" onclick="removeFitting(${at.id},${i})">✕</button>
+        </div>
+      `).join('') : '<div style="padding:10px 14px;font-size:12px;color:var(--mu)">Sin singularidades añadidas</div>'}
+      <div style="padding:10px 14px;border-top:1px solid var(--bd2)">
+        <div style="font-size:11px;color:var(--mu);font-weight:600;text-transform:uppercase;margin-bottom:8px">Añadir singularidad</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${FITTINGS.map(f => `
+            <button class="fit-add" onclick="addFitting(${f.zeta},'${f.name}')">${f.name} (ζ=${f.zeta})</button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+}
+
+// ── MATERIALS & AIR ───────────────────────────────────────────────────────────
+const selMat = document.getElementById('selMat');
+MATERIALS.forEach((m,i) => { const o=document.createElement('option');o.value=i;o.textContent=m.name;selMat.appendChild(o); });
+
+window.onMat = function() {
+  const m = MATERIALS[parseInt(selMat.value)];
+  if (m.eps !== null) {
+    eps = m.eps;
+    document.getElementById('epsCustomRow').style.display = 'none';
+  } else {
+    document.getElementById('epsCustomRow').style.display = 'block';
+    eps = (parseFloat(document.getElementById('epsInp').value) || 0.09) / 1000;
+  }
+  document.getElementById('matDesc').textContent = m.desc + `  · ε = ${(eps*1000).toFixed(4)} mm`;
+  buildAbaco(); update();
+};
+
+const selAir = document.getElementById('selAir');
+AIR_CONDITIONS.forEach((a,i) => { const o=document.createElement('option');o.value=i;o.textContent=a.name;selAir.appendChild(o); });
+
+window.onAir = function() {
+  const a = AIR_CONDITIONS[parseInt(selAir.value)];
+  if (a.nu !== null) {
+    rho = a.rho; nu = a.nu;
+    document.getElementById('airCustom').style.display = 'none';
+  } else {
+    document.getElementById('airCustom').style.display = 'block';
+    rho = parseFloat(document.getElementById('rhoInp').value)||1.204;
+    nu  = parseFloat(document.getElementById('nuInp').value)||1.516e-5;
+  }
+  document.getElementById('airDesc').textContent = `ρ = ${rho} kg/m³  ·  ν = ${nu.toExponential(3)} m²/s`;
+  buildAbaco(); update();
+};
+document.getElementById('rhoInp').addEventListener('input', () => { rho=parseFloat(document.getElementById('rhoInp').value)||rho; update(); });
+document.getElementById('nuInp').addEventListener('input',  () => { nu =parseFloat(document.getElementById('nuInp').value)||nu;  update(); });
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nb').forEach(btn => btn.addEventListener('click', () => {
+  const t = btn.dataset.nav;
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.dataset.page===t));
+  document.querySelectorAll('.nb').forEach(b => b.classList.toggle('active', b===btn));
+  if (t === 'abaco') { abaco.resize(); buildAbaco(); update(); }
+}));
+
+// ── RESIZE ────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', () => { abaco.resize(); update(); });
+
+// ── SW & INIT ─────────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+
+window.toast = function(msg) {
+  const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2300);
+};
+
+syncSliders();
+buildAbaco();
+update();
+onMat();
+onAir();
+</script>
+</body>
+</html>
