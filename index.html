@@ -43,29 +43,42 @@
       </button>
     </div>
 
-    <div class="sl-g">
-      <div class="sl-r">
-        <div class="sl-h">
-          <span class="sl-l">Caudal Q</span>
-          <span class="sl-v" id="vQ" style="color:var(--ac)">— m³/h</span>
+    <div style="padding:10px 16px 14px;display:flex;flex-direction:column;gap:10px">
+
+      <!-- Caudal Q -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+          <span style="font-size:13px;font-weight:600;color:var(--tx2)">Caudal Q</span>
+          <span style="font-size:11px;color:var(--mu)">m³/h</span>
         </div>
-        <input type="range" id="slQ" min="1" max="3" step="0.01" value="1.778">
+        <input type="number" class="ios-inp" id="inpQ"
+               min="1" max="500000" step="10" value="600"
+               style="width:100%;box-sizing:border-box">
       </div>
-      <div class="sl-r">
-        <div class="sl-h">
-          <span class="sl-l">Rozamiento objetivo R</span>
-          <span class="sl-v" id="vR" style="color:var(--pu)">— Pa/m</span>
+
+      <!-- Rozamiento R -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+          <span style="font-size:13px;font-weight:600;color:var(--tx2)">Rozamiento objetivo R</span>
+          <span style="font-size:11px;color:var(--mu)">Pa/m</span>
         </div>
-        <input type="range" id="slR" min="-1" max="1" step="0.01" value="-0.097">
+        <input type="number" class="ios-inp" id="inpR"
+               min="0.01" max="20" step="0.05" value="0.8"
+               style="width:100%;box-sizing:border-box">
       </div>
-      <div class="sl-r" id="arRow" style="display:none">
-        <div class="sl-h">
-          <span class="sl-l" id="arLabel">Relación de aspecto a/b</span>
-          <span class="sl-v" id="vAR" style="color:var(--or)">2.0 : 1</span>
+
+      <!-- Relación de aspecto (solo rect/oval) -->
+      <div id="arRow" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+          <span id="arLabel" style="font-size:13px;font-weight:600;color:var(--tx2)">Relación de aspecto a/b</span>
+          <span style="font-size:11px;color:var(--mu)">: 1</span>
         </div>
-        <input type="range" id="slAR" min="1.25" max="4" step="0.05" value="2.0">
+        <input type="number" class="ios-inp" id="inpAR"
+               min="1.25" max="4" step="0.05" value="2"
+               style="width:100%;box-sizing:border-box">
       </div>
-      <div id="spiralInfo" style="display:none;padding:8px 16px 12px;font-size:12px;color:var(--mu);line-height:1.6;background:rgba(88,86,214,0.06);border-top:1px solid var(--bd2)">
+
+      <div id="spiralInfo" style="display:none;padding:8px 0 2px;font-size:12px;color:var(--mu);line-height:1.6;border-top:1px solid var(--bd2)">
         🌀 <strong style="color:var(--pu)">Conducto espiral circular</strong> — Rugosidad efectiva 0.05 mm · Factor costura ×1.02 (ASHRAE) · Series comerciales cada 25–50 mm
       </div>
     </div>
@@ -247,7 +260,7 @@ import { AbacoChart, drawSection } from './js/chart.js';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let tipo   = 'circular';
-let Q      = 0.600;        // m³/s  (= 2160 m³/h, slider log10=1.778)
+let Q      = 600 / 3600;   // m³/s  (= 600 m³/h)
 let R      = 0.8;          // Pa/m
 let ar     = 2.0;
 let eps    = 0.09e-3;      // m
@@ -261,37 +274,31 @@ let activeTramo = null;
 const abacoCanvas   = document.getElementById('abacoCanvas');
 const sectionCanvas = document.getElementById('sectionCanvas');
 const abaco = new AbacoChart(abacoCanvas, ({ R: Rc, D: Dc }) => {
-  // Actualizar slider R
   R = Rc;
-  document.getElementById('slR').value = Math.log10(R);
+  document.getElementById('inpR').value = Rc.toFixed(3);
+  document.getElementById('hdrR').textContent = `${Rc.toFixed(2)} Pa/m`;
   update();
   toast(`📍 R=${Rc.toFixed(2)} Pa/m · D=${(Dc*1000).toFixed(0)} mm`);
 });
 
-// ── SLIDERS ───────────────────────────────────────────────────────────────────
-const slQ  = document.getElementById('slQ');
-const slR  = document.getElementById('slR');
-const slAR = document.getElementById('slAR');
+// ── ENTRADAS NUMÉRICAS ────────────────────────────────────────────────────────
+const inpQ  = document.getElementById('inpQ');
+const inpR  = document.getElementById('inpR');
+const inpAR = document.getElementById('inpAR');
 
-function track(sl, color) {
-  const pct = (sl.value - sl.min) / (sl.max - sl.min) * 100;
-  sl.style.background = `linear-gradient(to right,${color} ${pct}%,#e5e5ea ${pct}%)`;
-}
-
-function syncSliders() {
-  Q  = Math.pow(10, parseFloat(slQ.value));
-  R  = Math.pow(10, parseFloat(slR.value));
-  ar = parseFloat(slAR.value);
-  document.getElementById('vQ').textContent  = `${(Q*3600).toFixed(0)} m³/h  (${Q.toFixed(3)} m³/s)`;
-  document.getElementById('vR').textContent  = `${R.toFixed(3)} Pa/m`;
-  document.getElementById('vAR').textContent = `${ar.toFixed(1)} : 1`;
-  track(slQ, '#007aff'); track(slR, '#5856d6'); track(slAR, '#ff9500');
+function syncInputs() {
+  const qh = Math.max(1, parseFloat(inpQ.value)  || 600);
+  Q  = qh / 3600;                                        // m³/h → m³/s
+  R  = Math.max(0.01, parseFloat(inpR.value)  || 0.8);
+  ar = Math.min(4, Math.max(1.25, parseFloat(inpAR.value) || 2.0));
   document.getElementById('hdrR').textContent = `${R.toFixed(2)} Pa/m`;
 }
 
-slQ.addEventListener('input',  () => { syncSliders(); update(); });
-slR.addEventListener('input',  () => { syncSliders(); update(); });
-slAR.addEventListener('input', () => { syncSliders(); update(); });
+['input','change'].forEach(ev => {
+  inpQ.addEventListener(ev,  () => { syncInputs(); update(); });
+  inpR.addEventListener(ev,  () => { syncInputs(); update(); });
+  inpAR.addEventListener(ev, () => { syncInputs(); update(); });
+});
 
 // ── TIPO ──────────────────────────────────────────────────────────────────────
 window.setTipo = function(t) {
@@ -627,7 +634,7 @@ window.toast = function(msg) {
   setTimeout(()=>el.classList.remove('show'),2300);
 };
 
-syncSliders();
+syncInputs();
 buildAbaco();
 update();
 onMat();

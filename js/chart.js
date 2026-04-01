@@ -11,12 +11,14 @@ const D_MIN = 0.05, D_MAX = 1.5;  // m
 // ── ÁBACO ─────────────────────────────────────────────────────────────────────
 export class AbacoChart {
   constructor(canvas, onClick) {
-    this.canvas  = canvas;
-    this.ctx     = canvas.getContext('2d');
-    this.onClick = onClick || (() => {});
-    this.pad     = { top: 16, right: 20, bottom: 48, left: 56 };
-    this.point   = null;
-    this.lines   = null;
+    this.canvas    = canvas;
+    this.ctx       = canvas.getContext('2d');
+    this.onClick   = onClick || (() => {});
+    this.pad       = { top: 16, right: 20, bottom: 48, left: 56 };
+    this.point     = null;
+    this.lines     = null;
+    this._loupePos = null;   // { x, y } CSS px — null = sin lupa
+    this._rafId    = null;
     this.resize();
     this._bind();
   }
@@ -48,6 +50,7 @@ export class AbacoChart {
     if (!this._cache) this._buildCache();
     ctx.drawImage(this._cacheCanvas, 0, 0);
     if (this.point) this._drawPoint(this.point);
+    if (this._loupePos) this._drawLoupe(this._loupePos.x, this._loupePos.y);
   }
 
   _buildCache() {
@@ -64,6 +67,7 @@ export class AbacoChart {
     if (this.lines) this._drawIsoQ();
     this._drawAxes();
     this.ctx = save;
+    this._cache = true;   // marcar caché válido
   }
 
   _drawBg() {
@@ -92,12 +96,8 @@ export class AbacoChart {
   }
 
   _drawVelZones() {
-    // Banda de velocidades recomendadas (3-8 m/s) sombreada
     const ctx = this.ctx;
-    // Esta zona es difícil sin iso-v precalculadas, marcamos con texto
     ctx.fillStyle = 'rgba(52,199,89,0.06)';
-    // Aproximar: para v=3 y v=8, D aprox f(R)
-    // Simplificado: banda diagonal
   }
 
   _drawIsoQ() {
@@ -184,8 +184,83 @@ export class AbacoChart {
     ctx.fillText(`${(p.D*1000).toFixed(0)}`, this.pad.left - 4, y + 3);
   }
 
+  // ── LUPA ──────────────────────────────────────────────────────────────────
+  _drawLoupe(mx, my) {
+    if (!this.inChart(mx, my)) return;
+    const ctx    = this.ctx;
+    const RADIUS = 72;    // radio de la lupa en CSS px
+    const ZOOM   = 3.5;   // factor de ampliación
+
+    ctx.save();
+
+    // Clip circular
+    ctx.beginPath();
+    ctx.arc(mx, my, RADIUS, 0, Math.PI * 2);
+    ctx.clip();
+
+    // Fondo blanco limpio dentro de la lupa
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(mx - RADIUS, my - RADIUS, RADIUS * 2, RADIUS * 2);
+
+    // Transformación de zoom: ampliamos alrededor del cursor
+    ctx.translate(mx * (1 - ZOOM), my * (1 - ZOOM));
+    ctx.scale(ZOOM, ZOOM);
+
+    // Re-renderizamos el gráfico con la nueva transformación
+    this._drawBg();
+    this._drawGrid();
+    if (this.lines) this._drawIsoQ();
+    this._drawAxes();
+    if (this.point) this._drawPoint(this.point);
+
+    ctx.restore();
+
+    // Borde de la lupa con sombra
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.22)';
+    ctx.shadowBlur  = 12;
+    ctx.strokeStyle = 'rgba(30,30,30,0.65)';
+    ctx.lineWidth   = 2;
+    ctx.beginPath();
+    ctx.arc(mx, my, RADIUS, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Mira central (cruz roja fina)
+    ctx.save();
+    ctx.strokeStyle = 'rgba(220,53,69,0.75)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(mx - 10, my); ctx.lineTo(mx + 10, my);
+    ctx.moveTo(mx, my - 10); ctx.lineTo(mx, my + 10);
+    ctx.stroke();
+    ctx.restore();
+
+    // Tooltip con valores R y D sobre la lupa
+    const Rv = this.invX(mx), Dv = this.invY(my);
+    if (isFinite(Rv) && isFinite(Dv) && Rv > 0 && Dv > 0) {
+      const txt = `R = ${Rv.toFixed(2)} Pa/m  ·  Ø ${(Dv * 1000).toFixed(0)} mm`;
+      ctx.save();
+      ctx.font = 'bold 10px DM Mono,monospace';
+      const tw = ctx.measureText(txt).width;
+      let tx = mx - tw / 2 - 5;
+      let ty = my - RADIUS - 18;
+      if (ty < 4) ty = my + RADIUS + 6;
+      if (tx < 2) tx = 2;
+      if (tx + tw + 12 > this.W) tx = this.W - tw - 12;
+
+      ctx.fillStyle = 'rgba(20,20,20,0.82)';
+      ctx.fillRect(tx, ty, tw + 10, 16);
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'left';
+      ctx.fillText(txt, tx + 5, ty + 11);
+      ctx.restore();
+    }
+  }
+
   _bind() {
-    const handler = e => {
+    // Click / tap: leer R y D y notificar
+    const clickHandler = e => {
       e.preventDefault();
       const rect = this.canvas.getBoundingClientRect();
       const src  = e.touches ? e.touches[0] : e;
@@ -193,8 +268,40 @@ export class AbacoChart {
       if (!this.inChart(cx, cy)) return;
       this.onClick({ R: this.invX(cx), D: this.invY(cy) });
     };
-    this.canvas.addEventListener('click', handler);
-    this.canvas.addEventListener('touchend', handler, { passive: false });
+    this.canvas.addEventListener('click',    clickHandler);
+    this.canvas.addEventListener('touchend', clickHandler, { passive: false });
+
+    // Mousemove / touchmove: lupa (throttled con rAF)
+    const scheduleLoupe = (x, y) => {
+      this._loupePos = { x, y };
+      if (this._rafId) return;
+      this._rafId = requestAnimationFrame(() => {
+        this._rafId = null;
+        this.draw();
+      });
+    };
+
+    this.canvas.addEventListener('mousemove', e => {
+      const rect = this.canvas.getBoundingClientRect();
+      scheduleLoupe(e.clientX - rect.left, e.clientY - rect.top);
+    });
+
+    this.canvas.addEventListener('mouseleave', () => {
+      this._loupePos = null;
+      this.draw();
+    });
+
+    this.canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const rect = this.canvas.getBoundingClientRect();
+      const t    = e.touches[0];
+      scheduleLoupe(t.clientX - rect.left, t.clientY - rect.top);
+    }, { passive: false });
+
+    this.canvas.addEventListener('touchend', () => {
+      this._loupePos = null;
+      this.draw();
+    });
   }
 }
 
@@ -215,11 +322,9 @@ export function drawSection(canvas, geom, tipo) {
     const D = geom.Dnorm || geom.D;
     const r = Math.min((W - margin*2) / 2, (H - margin*2) / 2);
     const isSpiral = tipo === 'spiral';
-    // Duct wall
     ctx.strokeStyle = isSpiral ? '#5856d6' : '#adb5bd';
     ctx.lineWidth = 6;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
-    // Spiral seam lines (decorative)
     if (isSpiral) {
       ctx.strokeStyle = 'rgba(88,86,214,0.25)'; ctx.lineWidth = 1.5;
       for (let angle = 0; angle < Math.PI*2; angle += Math.PI/6) {
@@ -228,12 +333,9 @@ export function drawSection(canvas, geom, tipo) {
         ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
       }
     }
-    // Air fill
     ctx.fillStyle = isSpiral ? 'rgba(88,86,214,0.07)' : 'rgba(0,122,255,0.08)';
     ctx.beginPath(); ctx.arc(cx, cy, r - 3, 0, Math.PI*2); ctx.fill();
-    // Arrow (airflow)
     _drawArrow(ctx, cx - r*0.4, cy, cx + r*0.4, cy, isSpiral ? '#5856d6' : '#007aff');
-    // Dimension
     ctx.strokeStyle = '#dc3545'; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
     ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r); ctx.stroke();
     ctx.setLineDash([]);
@@ -245,37 +347,29 @@ export function drawSection(canvas, geom, tipo) {
     }
 
   } else if (tipo === 'oval') {
-    const a = geom.aNorm || geom.a;   // ancho mayor
-    const b = geom.bNorm || geom.b;   // alto menor (= Ø semicírculos)
+    const a = geom.aNorm || geom.a;
+    const b = geom.bNorm || geom.b;
     const scaleW = (W - margin*2) / a;
     const scaleH = (H - margin*2 - 30) / b;
     const sc = Math.min(scaleW, scaleH, 500);
     const pw = a * sc, ph = b * sc;
     const px = cx - pw/2, py = cy - ph/2;
-    const rb = ph / 2;   // radio semicírculos en canvas
-
-    // Draw oval path
+    const rb = ph / 2;
     const _oval = () => {
       ctx.beginPath();
-      ctx.arc(px + rb,      cy, rb, Math.PI/2, -Math.PI/2); // semicírculo izq
+      ctx.arc(px + rb,      cy, rb, Math.PI/2, -Math.PI/2);
       ctx.lineTo(px + pw - rb, cy - rb);
-      ctx.arc(px + pw - rb, cy, rb, -Math.PI/2, Math.PI/2); // semicírculo der
+      ctx.arc(px + pw - rb, cy, rb, -Math.PI/2, Math.PI/2);
       ctx.lineTo(px + rb, cy + rb);
       ctx.closePath();
     };
-    // Fill
     ctx.fillStyle = 'rgba(52,199,89,0.09)'; _oval(); ctx.fill();
-    // Stroke
     ctx.strokeStyle = '#34c759'; ctx.lineWidth = 5; _oval(); ctx.stroke();
-    // Arrow
     _drawArrow(ctx, px + pw*0.2, cy, px + pw*0.8, cy, '#34c759');
-    // Dimensions
     ctx.strokeStyle = '#dc3545'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
-    // Width a
     ctx.beginPath(); ctx.moveTo(px, py - 14); ctx.lineTo(px+pw, py-14); ctx.stroke();
     ctx.fillStyle = '#dc3545'; ctx.font = 'bold 11px DM Mono,monospace'; ctx.textAlign = 'center';
     ctx.fillText(`${(a*1000).toFixed(0)} mm`, cx, py - 18);
-    // Height b
     ctx.beginPath(); ctx.moveTo(px - 14, cy - rb); ctx.lineTo(px-14, cy+rb); ctx.stroke();
     ctx.save(); ctx.translate(px-18, cy); ctx.rotate(-Math.PI/2);
     ctx.fillText(`${(b*1000).toFixed(0)} mm`, 0, 0); ctx.restore();
@@ -284,7 +378,6 @@ export function drawSection(canvas, geom, tipo) {
     ctx.fillText(`AR = ${(a/b).toFixed(1)}:1  ·  OVAL`, cx, py + ph + 16);
 
   } else {
-    // rectangular
     const a = geom.aNorm || geom.a;
     const b = geom.bNorm || geom.b;
     const scale = Math.min((W - margin*2) / a, (H - margin*2 - 20) / b, 600);
