@@ -1,23 +1,9 @@
 {
   "name": "HVAC Naval Pro",
   "short_name": "HVAC Naval",
-  "description": "Gestión de conductos y cálculo de ruta crítica para ingeniería naval.",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#F2F2F7",
+  "background_color": "#f2f2f7",
   "theme_color": "#007AFF",
-  "orientation": "portrait",
-  "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
+  "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
 }
