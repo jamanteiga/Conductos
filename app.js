@@ -3,25 +3,21 @@ const SUPABASE_KEY = 'sb_publishable_mZb53is840WLLIsC2GfPSg_T9r1sz86';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let proyecto = null, lineas = [], lineaActivaId = null;
+let datosProyecto = { hull: "", armador: "", astillero: "", clase: "", norma: "" };
 
-// CATÁLOGO DE 114 ACCESORIOS CON COEFICIENTES K (Extracto representativo)
-const CATALOGO_K = {
-    "Conducto Recto": 0.02, "Codo 90º R/D=1.5": 0.25, "Codo 90º R/D=1.0": 0.45,
-    "Codo 45º R/D=1.5": 0.15, "Te Derivación 90º": 1.20, "Te Confluencia 90º": 0.80,
-    "Transición Rect/Circ": 0.30, "Reducción concéntrica": 0.10, "Difusor de Techo": 2.50,
-    "Rejilla de Retorno": 1.80, "Compuerta de Regulación": 0.50, "Silenciador 1m": 0.90,
-    "Venteo Estanco": 4.50, "Filtro G4": 1.20, "Filtro HEPA": 6.50, "UTA Naval": 12.0
-    // Aquí se completan los 114 elementos del Excel
+const CATALOGO_144 = {
+    "CONDUCTOS": { "Tramo Recto": 0.02, "Reducción": 0.15, "Transición R-C": 0.3 },
+    "CODOS": { "Codo 90º R/D=1.5": 0.25, "Codo 45º": 0.18, "Codo Rectangular": 0.55 },
+    "TES / DERIVACIONES": { "Te 90º": 1.2, "Te con Zapata": 0.45, "Pantalón": 0.65 },
+    "EQUIPOS NAVALES": { "UTA": 15, "Ventilador": 2, "Silenciador": 0.9, "Filtro HEPA": 6.5 },
+    "TERMINALES": { "Difusor": 2.5, "Rejilla": 1.8, "Venteo": 5.0, "Cuello Cisne": 3.5 }
 };
 
-// GESTIÓN DE IDIOMAS Y DIRECCIONES NAVALES
 window.i18n = {
     current: 'es',
-    change(lang) { this.current = lang; this.updateUI(); },
+    change(l) { this.current = l; this.updateUI(); },
     updateUI() {
-        const d = this.current === 'es' ? 
-            ["PROA (+X)", "POPA (-X)", "BABOR (+Y)", "ESTRIBOR (-Y)", "ARRIBA (+Z)", "ABAJO (-Z)"] :
-            ["BOW (+X)", "STERN (-X)", "PORT (+Y)", "STARBOARD (-Y)", "UP (+Z)", "DOWN (-Z)"];
+        const d = ["PROA (+X)", "POPA (-X)", "BABOR (+Y)", "ESTRIBOR (-Y)", "ARRIBA (+Z)", "ABAJO (-Z)"];
         const codes = ["X", "-X", "Y", "-Y", "Z", "-Z"];
         document.getElementById('compDir').innerHTML = codes.map((c, i) => `<option value="${c}">${d[i]}</option>`).join('');
     }
@@ -31,132 +27,115 @@ window.ui = {
     showPage(id) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById('page-'+id).classList.add('active');
-        if(id === 'visor') { setTimeout(() => { visor3D.init(); visor3D.dibujar(); }, 100); }
+        if(id === 'visor') { setTimeout(() => visor3D.init(), 100); }
+        if(id === 'proyecto') this.fillInfo();
+    },
+    fillInfo() {
+        document.getElementById('info-buque').value = proyecto.buque;
+        document.getElementById('info-hull').value = datosProyecto.hull;
+        document.getElementById('info-armador').value = datosProyecto.armador;
     },
     toggleForma(v) {
         document.getElementById('dims-rectangular').style.display = (v === 'circular') ? 'none' : 'grid';
         document.getElementById('dims-circular').style.display = (v === 'circular') ? 'block' : 'none';
     },
     fillAccesorios() {
-        const sel = document.getElementById('compTipo');
-        sel.innerHTML = Object.entries(CATALOGO_K).map(([name, k]) => 
-            `<option value="${name}">${name} (K=${k})</option>`).join('');
+        const g = document.getElementById('compGrupo').value;
+        document.getElementById('compTipo').innerHTML = Object.entries(CATALOGO_144[g]).map(([n, k]) => `<option value="${n}" data-k="${k}">${n} (K=${k})</option>`).join('');
     }
 };
 
 window.netManager = {
-    async addNode() {
+    addNode() {
         const l = lineas.find(line => line.id === lineaActivaId);
-        if(!l) return alert("ERROR: Seleccione una línea activa.");
+        if(!l) return alert("Selecciona línea");
 
         const forma = document.getElementById('compForma').value;
-        const nodo = {
-            id: Date.now(),
-            forma: forma,
-            tipo: document.getElementById('compTipo').value,
-            k: CATALOGO_K[document.getElementById('compTipo').value],
-            L: parseFloat(document.getElementById('compL').value) || 0, // mm
-            dir: document.getElementById('compDir').value,
-            jerarquia: document.getElementById('compJerarquia').value,
-            ancho: (forma !== 'circular') ? parseFloat(document.getElementById('compAncho').value) : parseFloat(document.getElementById('compDiametro').value),
-            alto: (forma !== 'circular') ? parseFloat(document.getElementById('compAlto').value) : parseFloat(document.getElementById('compDiametro').value),
-            Q: parseFloat(document.getElementById('compQ').value) || 0
-        };
+        const Q = parseFloat(document.getElementById('compQ').value);
+        let area = 0, W = 0, H = 0, D = 0;
 
-        l.red.push(nodo);
+        if(forma === 'circular') {
+            D = parseFloat(document.getElementById('compDiametro').value);
+            area = Math.PI * Math.pow((D/2000), 2);
+            W = D; H = D;
+        } else {
+            W = parseFloat(document.getElementById('compAncho').value);
+            H = parseFloat(document.getElementById('compAlto').value);
+            area = (W/1000) * (H/1000);
+        }
+
+        const v = area > 0 ? (Q / (area * 3600)) : 0;
+
+        l.red.push({
+            id: Date.now(), forma, tipo: document.getElementById('compTipo').value,
+            jerarquia: document.getElementById('compJerarquia').value,
+            L: parseFloat(document.getElementById('compL').value),
+            Q, W, H, D, v: v.toFixed(2), dir: document.getElementById('compDir').value
+        });
         this.render();
-        await dbManager.guardar(); // Autoguardado tras añadir
+        visor2D.dibujar();
     },
     render() {
         const l = lineas.find(line => line.id === lineaActivaId);
         document.getElementById('treeContainer').innerHTML = l.red.map(n => `
             <div class="win-tree-item">
-                <b>[${n.jerarquia}] ${n.tipo}</b> | L:${n.L}mm | K:${n.k} | Dir:${n.dir}
+                <div style="flex:1"><b>${n.tipo}</b> <br> <small>${n.L}mm | ${n.v} m/s</small></div>
+                <button onclick="netManager.removeNode(${n.id})">🗑</button>
             </div>`).join('');
+    },
+    removeNode(id) {
+        const l = lineas.find(line => line.id === lineaActivaId);
+        l.red = l.red.filter(n => n.id !== id);
+        this.render(); visor2D.dibujar();
+    }
+};
+
+window.visor2D = {
+    dibujar() {
+        const l = lineas.find(line => line.id === lineaActivaId);
+        if(!l) return;
+        let svg = `<svg width="100%" height="100%" viewBox="-500 -500 4000 4000">`;
+        let x = 0, y = 0;
+        l.red.forEach(n => {
+            svg += `<rect x="${x}" y="${y - (n.W/4)}" width="${n.L}" height="${n.W/2}" fill="none" stroke="blue" stroke-width="4"/>`;
+            svg += `<text x="${x+10}" y="${y+5}" font-size="30">${n.tipo} (v:${n.v})</text>`;
+            if(n.dir === 'X') x += n.L; else if(n.dir === 'Y') y += n.L; // Simplificado para el ejemplo
+        });
+        svg += `</svg>`;
+        document.getElementById('canvas2D').innerHTML = svg;
     }
 };
 
 window.dbManager = {
     async guardar() {
-        if (!proyecto) return;
-        document.getElementById('status-sync').style.background = "#ffb900";
-        const { error } = await supabaseClient.from('proyectos_hvac').upsert({ 
-            nombre_buque: proyecto.buque, 
-            datos_hvac: { lineas } 
-        });
-        document.getElementById('status-sync').style.background = error ? "#d13438" : "#28a745";
-    },
-    async cargar(n) {
-        const { data } = await supabaseClient.from('proyectos_hvac').select('*').eq('nombre_buque', n).single();
-        proyecto = { buque: data.nombre_buque };
-        lineas = data.datos_hvac.lineas || [];
-        document.getElementById('badge-buque').textContent = n;
-        document.getElementById('modalProyecto').style.display = 'none';
-        lineManager.render();
+        datosProyecto = { hull: document.getElementById('info-hull').value, armador: document.getElementById('info-armador').value };
+        const { error } = await supabaseClient.from('proyectos_hvac').upsert({ nombre_buque: proyecto.buque, datos_hvac: { lineas, datosProyecto } });
+        alert(error ? "Error" : "Guardado OK");
     }
 };
 
-export const visor3D = {
-    scene: null, camera: null, renderer: null, controls: null,
-    init() {
-        const container = document.getElementById('container3d');
-        if (this.renderer) return;
-        this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0xeeeeee);
-        this.camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 10, 100000);
-        this.camera.position.set(5000, 5000, 5000);
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(container.clientWidth, container.clientHeight);
-        container.appendChild(this.renderer.domElement);
-        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.enableDamping = true;
-        this.scene.add(new THREE.AmbientLight(0xffffff, 1));
-        this.animate();
-        this.setupExport();
-    },
-    setupExport() {
-        const div = document.createElement('div');
-        div.className = "export-menu";
-        div.style = "position:absolute; bottom:80px; right:20px; display:flex; gap:5px;";
-        ['STL', 'STEP', 'JSON'].forEach(ext => {
-            const btn = document.createElement('button');
-            btn.innerText = "Export " + ext;
-            btn.className = "win-btn-primary";
-            btn.onclick = () => this.download(ext);
-            div.appendChild(btn);
-        });
-        document.getElementById('container3d').appendChild(div);
-    },
-    animate() { requestAnimationFrame(() => this.animate()); if(this.controls) this.controls.update(); if(this.renderer) this.renderer.render(this.scene, this.camera); },
-    dibujar() {
-        this.scene.children.filter(c => c.isMesh).forEach(m => this.scene.remove(m));
-        const l = lineas.find(line => line.id === lineaActivaId);
-        if(!l) return;
-        let cursor = new THREE.Vector3(0,0,0);
-        l.red.forEach(n => {
-            const geo = (n.forma === 'circular') ? new THREE.CylinderGeometry(n.ancho/2, n.ancho/2, n.L, 20) : new THREE.BoxGeometry(n.ancho, n.alto, n.L);
-            const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x0078d4 }));
-            const dirVec = new THREE.Vector3(n.dir==='X'?1:n.dir==='-X'?-1:0, n.dir==='Z'?1:n.dir==='-Z'?-1:0, n.dir==='Y'?1:n.dir==='-Y'?-1:0);
-            mesh.position.copy(cursor.clone().add(dirVec.clone().multiplyScalar(n.L/2)));
-            if(n.dir.includes('X')) mesh.rotation.z = Math.PI/2;
-            if(n.dir.includes('Y')) mesh.rotation.x = Math.PI/2;
-            this.scene.add(mesh);
-            cursor.add(dirVec.multiplyScalar(n.L));
-        });
-    },
-    download(ext) {
-        const blob = new Blob([JSON.stringify(lineas)], {type: 'text/plain'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `export.${ext.toLowerCase()}`;
-        a.click();
-    }
-};
+window.authManager = { login() { 
+    document.getElementById('modalPin').style.display='none'; 
+    document.getElementById('modalProyecto').style.display='flex';
+    i18n.updateUI();
+    document.getElementById('compGrupo').innerHTML = Object.keys(CATALOGO_144).map(g => `<option value="${g}">${g}</option>`).join('');
+    document.getElementById('compJerarquia').innerHTML = ["Principal", "Ramal", "Derivación"].map(j => `<option value="${j}">${j}</option>`).join('');
+    ui.fillAccesorios();
+}};
 
-window.authManager = { login() { document.getElementById('modalPin').style.display='none'; document.getElementById('modalProyecto').style.display='flex'; dbManager.listarProyectos(); ui.fillAccesorios(); i18n.updateUI(); }};
-window.proyectManager = { crearNuevo() { const n = document.getElementById('p_buque').value; if(!n) return; proyecto = {buque: n.toUpperCase()}; lineas = []; dbManager.guardar(); document.getElementById('modalProyecto').style.display='none'; }};
-window.lineManager = { 
-    nuevaLinea() { lineas.push({id: Date.now(), numero: document.getElementById('l_numero').value, servicio: document.getElementById('l_servicio').value, red: []}); this.render(); dbManager.guardar(); },
-    render() { document.getElementById('listaLineas').innerHTML = lineas.map(l => `<div class="win-card-linea" onclick="lineManager.select(${l.id})"><b>L-${l.numero}</b> - ${l.servicio}</div>`).join(''); },
-    select(id) { lineaActivaId = id; ui.showPage('red'); netManager.render(); }
+window.proyectManager = { crearNuevo() {
+    proyecto = { buque: document.getElementById('p_buque').value.toUpperCase() };
+    document.getElementById('badge-buque').innerText = proyecto.buque;
+    document.getElementById('modalProyecto').style.display='none';
+}};
+
+window.lineManager = {
+    nuevaLinea() {
+        lineas.push({ id: Date.now(), bloque: document.getElementById('l_bloque').value, numero: document.getElementById('l_numero').value, servicio: document.getElementById('l_servicio').value, red: [] });
+        this.render();
+    },
+    render() {
+        document.getElementById('listaLineas').innerHTML = lineas.map(l => `<div class="win-card-linea" onclick="lineManager.select(${l.id})"><b>B:${l.bloque}</b> | ${l.numero}</div>`).join('');
+    },
+    select(id) { lineaActivaId = id; ui.showPage('red'); netManager.render(); visor2D.dibujar(); }
 };
