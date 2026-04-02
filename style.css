@@ -1,61 +1,60 @@
-:root {
-    --win-bg: #f0f0f0;
-    --win-border: #828790;
-    --accent: #28a745;
+:root { 
+    --win-border: #828790; 
+    --accent: #28a745; 
+    --win-bg: #f0f0f0; 
 }
 
-body {
-    margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif;
-    background: var(--win-bg); height: 100vh; display: flex; flex-direction: column;
+body { 
+    margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; 
+    height: 100vh; display: flex; flex-direction: column; overflow: hidden; 
+    background: var(--win-bg);
 }
 
-/* Cabecera */
-.main-header {
-    height: 40px; background: white; border-bottom: 2px solid var(--win-border);
-    display: flex; justify-content: space-between; align-items: center; padding: 0 15px;
+.main-header { 
+    height: 40px; background: #fff; border-bottom: 2px solid var(--win-border); 
+    display: flex; align-items: center; justify-content: space-between; padding: 0 15px; font-size: 12px;
 }
 
-/* Contenedor Principal */
-.app-container {
-    display: flex; flex: 1; overflow: hidden;
-}
+.app-container { display: flex; flex: 1; height: calc(100vh - 90px); }
 
-/* Sidebar */
-.sidebar-config {
-    width: 300px; border-right: 2px solid var(--win-border); padding: 15px;
-    background: #fdfdfd; display: flex; flex-direction: column; gap: 10px;
+/* SIDEBAR */
+.sidebar-config { 
+    width: 320px; border-right: 2px solid var(--win-border); 
+    padding: 15px; overflow-y: auto; background: #f9f9f9; 
 }
-
-.input-group { display: flex; flex-direction: column; }
+.sidebar-config label { display: block; font-weight: bold; font-size: 11px; margin-top: 10px; color: #444; }
+.sidebar-config input, .sidebar-config select { width: 100%; padding: 5px; margin-top: 2px; border: 1px solid #ccc; }
 .input-row { display: flex; gap: 10px; }
-.input-row div { flex: 1; }
 
-label { font-size: 12px; font-weight: bold; margin-bottom: 2px; }
-select, input { padding: 5px; border: 1px solid var(--win-border); }
+/* VISOR Y ZONA DATOS */
+.visor-area { flex: 1; display: flex; flex-direction: column; }
+#container3d { flex: 0 0 40%; background: #000; border-bottom: 2px solid var(--win-border); }
 
-.btn-add { 
-    margin-top: 10px; padding: 10px; background: var(--accent); 
-    color: white; border: none; font-weight: bold; cursor: pointer;
+.selection-bar { 
+    flex: 1; background: #fff; padding: 15px; overflow-y: auto; /* SCROLL VERTICAL AQUÍ */
+    display: flex; flex-direction: column;
 }
 
-/* Visor */
-.visor-area { flex: 1; display: flex; flex-direction: column; background: #eee; }
-#container3d { flex: 1; position: relative; border: 1px solid #ccc; margin: 10px; background: #000; }
-.placeholder-text { color: white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-
-.selection-bar {
-    height: 60px; background: white; border-top: 2px solid var(--win-border);
-    display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+.data-grid-pro { 
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+    gap: 10px; margin-top: 10px; padding-bottom: 20px;
 }
 
-/* Footer */
-.main-footer {
-    height: 50px; background: #e1e1e1; border-top: 2px solid var(--win-border);
-    display: flex; justify-content: space-between; align-items: center; padding: 0 10px;
+.node-card-edit { 
+    padding: 10px; border: 1px solid #ddd; border-left: 4px solid var(--accent);
+    background: #fdfdfd; cursor: pointer; font-size: 12px;
 }
+.node-card-edit:hover { background: #f0f7f0; }
 
-.main-footer button { 
-    padding: 6px 12px; margin: 0 2px; background: white; border: 1px solid #777; cursor: pointer;
-}
+/* BOTONES */
+.btn-add { width: 100%; padding: 10px; background: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 15px; }
+.btn-import { background: #5b2c91; color: white; border: none; padding: 5px 10px; cursor: pointer; margin-right: 10px; }
+.btn-modify { background: #0078d4; color: white; border: none; padding: 10px 20px; cursor: pointer; }
+.btn-delete { background: #d13438; color: white; border: none; padding: 10px 20px; cursor: pointer; }
 
-.btn-exit { color: white; background: #d9534f !important; }
+.main-footer { height: 50px; background: #ddd; border-top: 2px solid var(--win-border); display: flex; align-items: center; justify-content: space-between; padding: 0 15px; }
+.main-footer button { padding: 8px 15px; background: #fff; border: 1px solid #999; cursor: pointer; font-size: 12px; }
+.btn-exit { background: #d13438 !important; color: white; }
+
+.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.win-dialog { background: white; padding: 25px; border: 2px solid #333; width: 500px; max-height: 80vh; overflow-y: auto; }

@@ -1,106 +1,153 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>HVAC Marine Designer - Desktop Professional</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-</head>
-<body>
+// Catálogo de los 144 elementos (resumen para funcionalidad)
+const CATALOGO = {
+    "CONDUCTO": 0.02, "CODO 90": 0.4, "CODO 45": 0.2, "TE": 1.2, "REDUCCION": 0.15, "SILENCIADOR": 0.9, "UTA": 15
+};
 
-<header class="main-header">
-    <div class="project-info">
-        <span id="header-buque">PROYECTO: ---</span> | 
-        <span id="header-hull">HULL: ---</span> | 
-        <span id="header-bloque">BLOQUE: ---</span>
-    </div>
-    <div class="header-actions">
-        <button onclick="dbManager.guardar()">Guardar</button>
-        <select id="langSelector"><option>Idioma</option></select>
-    </div>
-</header>
+let redHvac = [];
+let idSeleccionado = null;
+let scene, camera, renderer, modelEstructura;
 
-<div class="app-container">
-    <aside class="sidebar-config">
-        <h3>Configuración componente</h3>
-        
-        <div class="input-group">
-            <label>Jerarquía</label>
-            <select id="compJerarquia">
-                <option value="Principal">Conducto Principal</option>
-                <option value="Ramal">Ramal</option>
-                <option value="Derivación">Derivación</option>
-            </select>
-        </div>
+window.ui = {
+    toggleForma(v) {
+        document.getElementById('dims-rect').style.display = (v === 'circular') ? 'none' : 'flex';
+        document.getElementById('dims-circ').style.display = (v === 'circular') ? 'flex' : 'none';
+    },
+    showSection(sec) {
+        const modal = document.getElementById('modal-container');
+        const content = document.getElementById('modal-content');
+        modal.style.display = 'flex';
+        if(sec === 'datos') {
+            content.innerHTML = `<h3>Datos de Diseño</h3><p>Configure los parámetros generales del buque aquí.</p>`;
+        } else if(sec === 'lineas') {
+            content.innerHTML = `<h3>Gestión de Líneas</h3><p>Bloque: ${document.getElementById('val-bloque').innerText}</p>`;
+        } else {
+            this.closeModal();
+        }
+    },
+    closeModal() { document.getElementById('modal-container').style.display = 'none'; },
+    exportar() { alert("Exportando a formato técnico (STP/DXF)..."); }
+};
 
-        <div class="input-group">
-            <label>Tipo conducto</label>
-            <select id="compForma" onchange="ui.toggleForma(this.value)">
-                <option value="rectangular">Rectangular</option>
-                <option value="circular">Circular</option>
-                <option value="oval">Oval</option>
-            </select>
-        </div>
+window.netManager = {
+    addNode() {
+        const forma = document.getElementById('compForma').value;
+        const Q = parseFloat(document.getElementById('compQ').value);
+        let W = parseFloat(document.getElementById('compW').value);
+        let H = parseFloat(document.getElementById('compH').value);
+        if(forma === 'circular') { W = H = parseFloat(document.getElementById('compD').value); }
 
-        <div class="input-group">
-            <label>Accesorio</label>
-            <select id="compTipo"></select> </div>
+        const area = (W/1000) * (H/1000);
+        const v = (Q / (area * 3600)).toFixed(2);
 
-        <div id="dims-rect" class="input-row">
-            <div><label>W (mm)</label><input type="number" id="compW" value="400"></div>
-            <div><label>H (mm)</label><input type="number" id="compH" value="300"></div>
-        </div>
+        const nodo = {
+            id: Date.now(),
+            jerarquia: document.getElementById('compJerarquia').value,
+            tipo: document.getElementById('compTipo').value,
+            W, H, L: parseFloat(document.getElementById('compL').value),
+            Q, v, dir: document.getElementById('compDir').value,
+            forma
+        };
 
-        <div id="dims-circ" class="input-row" style="display:none">
-            <div><label>Ø (mm)</label><input type="number" id="compD" value="250"></div>
-        </div>
+        redHvac.push(nodo);
+        this.renderAll();
+        visor3D.actualizar();
+    },
+    renderAll() {
+        const grid = document.getElementById('grid-edicion');
+        grid.innerHTML = redHvac.map(n => `
+            <div class="node-card-edit" onclick="netManager.selectNode(${n.id})">
+                <b>${n.tipo}</b><br>
+                Dim: ${n.W}x${n.H}mm<br>
+                L: ${n.L}mm | v: ${n.v}m/s
+            </div>`).join('');
+    },
+    selectNode(id) {
+        idSeleccionado = id;
+        const n = redHvac.find(x => x.id === id);
+        document.getElementById('selected-info').innerHTML = `EDITANDO: ${n.tipo} (${n.id})`;
+        // Cargar en form lateral
+        document.getElementById('compL').value = n.L;
+        document.getElementById('compW').value = n.W;
+        document.getElementById('compH').value = n.H;
+        document.getElementById('compQ').value = n.Q;
+        document.getElementById('compDir').value = n.dir;
+    },
+    modifyNode() {
+        if(!idSeleccionado) return;
+        const n = redHvac.find(x => x.id === idSeleccionado);
+        n.L = parseFloat(document.getElementById('compL').value);
+        n.Q = parseFloat(document.getElementById('compQ').value);
+        n.W = parseFloat(document.getElementById('compW').value);
+        n.H = parseFloat(document.getElementById('compH').value);
+        n.dir = document.getElementById('compDir').value;
+        const area = (n.W/1000) * (n.H/1000);
+        n.v = (n.Q / (area * 3600)).toFixed(2);
+        this.renderAll();
+        visor3D.actualizar();
+    },
+    deleteNode() {
+        redHvac = redHvac.filter(x => x.id !== idSeleccionado);
+        idSeleccionado = null;
+        this.renderAll();
+        visor3D.actualizar();
+    }
+};
 
-        <div class="input-row">
-            <div><label>L (m)</label><input type="number" id="compL" step="0.1" value="1.0"></div>
-            <div><label>Caudal (m³/h)</label><input type="number" id="compQ" value="1200"></div>
-        </div>
+const visor3D = {
+    init() {
+        const container = document.getElementById('container3d');
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+        camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 100000);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+        const light = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(light);
+        camera.position.set(3000, 3000, 3000);
+        camera.lookAt(0,0,0);
+        this.animate();
+    },
+    importarArchivo(event) {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+        const ext = file.name.split('.').pop().toLowerCase();
+        reader.onload = (e) => {
+            if(ext === 'stl') {
+                const loader = new THREE.STLLoader();
+                const geom = loader.parse(e.target.result);
+                const mesh = new THREE.Mesh(geom, new THREE.MeshPhongMaterial({color: 0x555555, transparent: true, opacity: 0.4}));
+                if(modelEstructura) scene.remove(modelEstructura);
+                modelEstructura = mesh; scene.add(mesh);
+            }
+        };
+        if(ext === 'stl') reader.readAsArrayBuffer(file);
+    },
+    actualizar() {
+        scene.children = scene.children.filter(c => c === modelEstructura || c instanceof THREE.AmbientLight);
+        let x=0, y=0, z=0;
+        redHvac.forEach(n => {
+            const geo = new THREE.BoxGeometry(n.L, n.H, n.W);
+            const mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({color: 0x0078d4}));
+            if(n.dir === 'X') { mesh.position.set(x + n.L/2, y, z); x += n.L; }
+            else if(n.dir === '-X') { mesh.position.set(x - n.L/2, y, z); x -= n.L; }
+            else if(n.dir === 'Y') { mesh.position.set(x, y + n.L/2, z); y += n.L; }
+            else if(n.dir === '-Y') { mesh.position.set(x, y - n.L/2, z); y -= n.L; }
+            scene.add(mesh);
+        });
+    },
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        renderer.render(scene, camera);
+    }
+};
 
-        <div class="input-group">
-            <label>Dirección proyectada</label>
-            <select id="compDir">
-                <option value="X">PROA (+X)</option>
-                <option value="-X">POPA (-X)</option>
-                <option value="Y">BABOR (+Y)</option>
-                <option value="-Y">ESTRIBOR (-Y)</option>
-                <option value="Z">ARRIBA (+Z)</option>
-                <option value="-Z">ABAJO (-Z)</option>
-            </select>
-        </div>
-
-        <button class="btn-add" onclick="netManager.addNode()">Añadir a la red</button>
-    </aside>
-
-    <main class="visor-area">
-        <div id="container3d">
-            <div class="placeholder-text">Visor 3D</div>
-        </div>
-        
-        <div class="selection-bar">
-            <div id="selected-data">datos de linea/ramal derivación o accesorio</div>
-            <button class="btn-modify">Modificar</button>
-        </div>
-    </main>
-</div>
-
-<footer class="main-footer">
-    <div class="footer-left">
-        <button onclick="ui.showSection('diseno')">Datos diseño</button>
-        <button onclick="ui.showSection('lineas')">Lineas</button>
-        <button onclick="ui.showSection('visor')">Visor 3D</button>
-    </div>
-    <div class="footer-right">
-        <button>Exportación 3D</button>
-        <button onclick="proyectManager.cambiar()">Cambiar proyecto</button>
-        <button class="btn-exit">Salir</button>
-    </div>
-</footer>
-
-<script src="app.js" type="module"></script>
-</body>
-</html>
+window.onload = () => {
+    const sel = document.getElementById('compTipo');
+    Object.keys(CATALOGO).forEach(k => {
+        let opt = document.createElement('option');
+        opt.value = k; opt.text = `${k} (K=${CATALOGO[k]})`;
+        sel.add(opt);
+    });
+    visor3D.init();
+};
