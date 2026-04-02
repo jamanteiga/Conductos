@@ -18,14 +18,30 @@ export const PI       = Math.PI;
 
 // ── MATERIALES DE CONDUCTOS ───────────────────────────────────────────────────
 export const MATERIALS = [
-  { name: 'Acero galvanizado (liso)',   eps: 0.09e-3,  desc: 'Más común en HVAC'        },
-  { name: 'Acero galvanizado (medio)',  eps: 0.15e-3,  desc: 'Con uniones transversales' },
-  { name: 'Fibra de vidrio interior',   eps: 0.90e-3,  desc: 'Con revestimiento interno' },
-  { name: 'Concreto / hormigón',        eps: 1.30e-3,  desc: 'Conductos enterrados'      },
-  { name: 'Flexible aluminio',          eps: 1.50e-3,  desc: 'Tramos cortos máx. 1.5 m'  },
-  { name: 'PVC liso',                   eps: 0.05e-3,  desc: 'Extracción laboratorios'   },
-  { name: 'Acero inoxidable',           eps: 0.05e-3,  desc: 'Cocinas / industria'       },
-  { name: 'Personalizado',              eps: null,      desc: 'Introduce rugosidad'       },
+  { name: 'Aluminio',                    eps: 0.05e-3,   desc: 'ε = 0.05 mm · Conductos de aluminio liso'                    },
+  { name: 'Acero comercial',             eps: 0.045e-3,  desc: 'ε = 0.045 mm · Acero negro laminado en frío'                 },
+  { name: 'Acero corrugado',             eps: 3e-3,      desc: 'ε = 3 mm · Chapa ondulada, alta resistencia'                 },
+  { name: 'Acero galvanizado',           eps: 0.15e-3,   desc: 'ε = 0.15 mm · Más común en HVAC, con uniones transversales'  },
+  { name: 'Acero inoxidable',            eps: 0.05e-3,   desc: 'ε = 0.05 mm · Cocinas industriales, laboratorios'            },
+  { name: 'Chapa negra',                 eps: 0.1e-3,    desc: 'ε = 0.1 mm · Acero sin galvanizar'                           },
+  { name: 'Climaver Neto',               eps: 0.05e-3,   desc: 'ε = 0.05 mm · Panel de lana de vidrio (cara lisa)'           },
+  { name: 'Climaver Plus R',             eps: 0.05e-3,   desc: 'ε = 0.05 mm · Panel lana de vidrio reforzado'                },
+  { name: 'Climaver APTA',               eps: 0.05e-3,   desc: 'ε = 0.05 mm · Panel lana de vidrio alta temperatura'         },
+  { name: 'Cobre liso',                  eps: 0.0015e-3, desc: 'ε = 0.0015 mm · Tuberías de cobre para ventilación'          },
+  { name: 'Conducto flexible',           eps: 3e-3,      desc: 'ε = 3 mm · Flexible metálico / aluminio, tramos ≤ 1.5 m'     },
+  { name: 'Conducto textil (poliéster)', eps: 0.2e-3,    desc: 'ε = 0.2 mm · Calcetín textil de distribución'                },
+  { name: 'Espirometálico (acero)',      eps: 0.15e-3,   desc: 'ε = 0.15 mm · Tubo espiral de acero galvanizado'             },
+  { name: 'Fibra de vidrio',             eps: 0.9e-3,    desc: 'ε = 0.9 mm · Con revestimiento interior de FV'               },
+  { name: 'Hierro fundido',              eps: 0.5e-3,    desc: 'ε = 0.5 mm · Conductos enterrados o industriales'            },
+  { name: 'Hormigón pulido',             eps: 2e-3,      desc: 'ε = 2 mm · Shafts de hormigón o conductos enterrados'        },
+  { name: 'Lana mineral (FV)',           eps: 1.2e-3,    desc: 'ε = 1.2 mm · Lana de fibra de vidrio sin revestir'           },
+  { name: 'Lana de vidrio desnuda',      eps: 1.2e-3,    desc: 'ε = 1.2 mm · Panel de lana de vidrio sin acabado'            },
+  { name: 'Madera cepillada',            eps: 1e-3,      desc: 'ε = 1 mm · Conductos de madera para instalaciones especiales'},
+  { name: 'Poliuretano (PIR/P3)',        eps: 0.08e-3,   desc: 'ε = 0.08 mm · Panel sandwich de poliuretano'                 },
+  { name: 'PRFV',                        eps: 0.01e-3,   desc: 'ε = 0.01 mm · Plástico reforzado con fibra de vidrio'        },
+  { name: 'PVC',                         eps: 0.0015e-3, desc: 'ε = 0.0015 mm · PVC liso, extracción laboratorios'           },
+  { name: 'Tubo de lona (textil)',        eps: 0.3e-3,    desc: 'ε = 0.3 mm · Tubo flexible de lona o tejido técnico'         },
+  { name: 'Personalizado',               eps: null,       desc: 'Introduce la rugosidad ε en mm'                              },
 ];
 
 // ── CONDICIONES DE AIRE ───────────────────────────────────────────────────────
@@ -88,12 +104,7 @@ export function areaRect(a, b) { return a * b; }
  * Calcula diámetro, velocidad, Re, f para conducto circular
  */
 export function sizeCircular(Q, R_target, eps, rho = RHO_STD, nu = NU_STD, maxIter = 50) {
-  // Iteración: D desconocido → estimar con Darcy
-  // R = f * (1/D) * rho * v² / 2  ;  v = Q / A = 4Q/(πD²)
-  // R = f * (1/D) * rho/2 * (4Q/πD²)² = f * 8*rho*Q²/(π²*D^5)
-  // → D = (f * 8*rho*Q² / (π²*R))^(1/5)   (iteración en f)
-
-  let D = 0.3; // estimación inicial
+  let D = 0.3;
   let f = 0.02;
   for (let i = 0; i < maxIter; i++) {
     const Dnew = Math.pow(f * 8 * rho * Q * Q / (PI * PI * R_target), 0.2);
@@ -118,11 +129,8 @@ export function sizeCircular(Q, R_target, eps, rho = RHO_STD, nu = NU_STD, maxIt
  * Calcula dimensiones a×b, velocidad, etc.
  */
 export function sizeRectangular(Q, R_target, eps, ar = 2.0, rho = RHO_STD, nu = NU_STD) {
-  // Usar diámetro equivalente para calcular dimensiones
   const circ = sizeCircular(Q, R_target, eps, rho, nu);
   const Deq  = circ.D;
-  // Deq = 1.30 * (a*b)^0.625 / (a+b)^0.25  con a = ar*b
-  // Despejar b por iteración numérica
   let b = Deq / 2;
   for (let i = 0; i < 60; i++) {
     const a    = ar * b;
@@ -142,16 +150,6 @@ export function sizeRectangular(Q, R_target, eps, ar = 2.0, rho = RHO_STD, nu = 
 }
 
 // ── CONDUCTO OVAL ─────────────────────────────────────────────────────────────
-/**
- * Sección oval (dos semicírculos + dos rectas paralelas)
- * Parámetros: a = ancho mayor [m], b = alto menor [m]  (b ≤ a)
- * Relación: b es el diámetro de los semicírculos, (a-b) es la longitud recta
- *
- * Área:      A = π(b/2)² + (a-b)·b
- * Perímetro: P = π·b + 2(a-b)
- * Dh:        4A/P
- * Deq (igual rozamiento): Deq = 1.55·A^0.625 / P^0.25  (ASHRAE)
- */
 export function areaOval(a, b)  { return Math.PI*(b/2)**2 + (a-b)*b; }
 export function perimOval(a, b) { return Math.PI*b + 2*(a-b); }
 export function dhOval(a, b)    { return 4*areaOval(a,b)/perimOval(a,b); }
@@ -160,17 +158,12 @@ export function deqOval(a, b)   {
   return 1.55 * Math.pow(A, 0.625) / Math.pow(P, 0.25);
 }
 
-/**
- * Dimensionado de conducto oval dado Q, R_target y relación de aspecto ar = a/b
- * Itera sobre b para encontrar Deq que coincida con el circular equivalente
- */
 export function sizeOval(Q, R_target, eps, ar = 2.0, rho = RHO_STD, nu = NU_STD) {
-  if (ar < 1.25) ar = 1.25; // mínimo físico para oval real
-  if (ar > 4.0)  ar = 4.0;  // máximo recomendado SMACNA
+  if (ar < 1.25) ar = 1.25;
+  if (ar > 4.0)  ar = 4.0;
   const circ = sizeCircular(Q, R_target, eps, rho, nu);
   const Deq_obj = circ.D;
 
-  // Iterar b: Deq(ar·b, b) = Deq_obj
   let b = Deq_obj / ar;
   for (let i = 0; i < 80; i++) {
     const a     = ar * b;
@@ -191,10 +184,6 @@ export function sizeOval(Q, R_target, eps, ar = 2.0, rho = RHO_STD, nu = NU_STD)
   return { a, b, A, P, Dh, Deq, v, Re, f, eps_D, R_calc };
 }
 
-/**
- * Series comerciales de conductos ovales (SMACNA)
- * Formato: { a [mm], b_series [mm] }  — b es el alto menor (diámetro semicírculos)
- */
 export const OVAL_SERIES = [
   { b:  150, a_series: [200, 250, 300, 400, 500, 600, 800, 1000] },
   { b:  200, a_series: [250, 300, 400, 500, 600, 800, 1000, 1200] },
@@ -203,9 +192,7 @@ export const OVAL_SERIES = [
   { b:  400, a_series: [500, 600, 800, 1000, 1200, 1500, 2000] },
 ];
 
-/** Normalizar oval a serie comercial más próxima */
 export function normalizeOval(a, b) {
-  // Buscar b comercial más cercano
   const bs = OVAL_SERIES.map(s => s.b/1000);
   const bNorm = bs.reduce((prev, curr) => Math.abs(curr - b) < Math.abs(prev - b) ? curr : prev);
   const entry = OVAL_SERIES.find(s => s.b/1000 === bNorm);
@@ -216,32 +203,19 @@ export function normalizeOval(a, b) {
 }
 
 // ── CONDUCTO ESPIRAL CIRCULAR ─────────────────────────────────────────────────
-/**
- * El conducto espiral circular es geométricamente idéntico al circular liso
- * pero con mayor rigidez y menor rugosidad efectiva que el rectangular.
- * La diferencia principal es:
- *   - Rugosidad típica: 0.05 mm (costura espiral lisa) vs 0.09 mm (galvanizado plano)
- *   - Series comerciales diferentes (paso 25–50 mm)
- *   - Factor de corrección de costura: fc ≈ 1.02–1.05 (ASHRAE 2017, Cap.21)
- *
- * Se calcula igual que circular pero con rugosidad y series propias.
- */
 export const SPIRAL_SERIES_MM = [
   80, 100, 112, 125, 140, 150, 160, 180, 200, 224, 250, 280, 315,
   355, 400, 450, 500, 560, 630, 710, 800, 900, 1000, 1120, 1250
 ];
 
-/** Factor de corrección de costura espiral (ASHRAE) */
 export const SPIRAL_SEAM_FACTOR = 1.02;
 
 export function sizeSpiral(Q, R_target, eps_spiral = 0.05e-3, rho = RHO_STD, nu = NU_STD) {
-  // Igual que circular pero con R ajustado por factor de costura
   const R_adj = R_target / SPIRAL_SEAM_FACTOR;
   const res   = sizeCircular(Q, R_adj, eps_spiral, rho, nu);
   res.isSpiral = true;
   res.eps_spiral = eps_spiral;
   res.seamFactor = SPIRAL_SEAM_FACTOR;
-  // R real con factor costura
   res.R_calc_spiral = res.R_calc * SPIRAL_SEAM_FACTOR;
   return res;
 }
@@ -252,7 +226,6 @@ export function normalizeSpiral(D) {
 }
 
 // ── NORMALIZAR DIMENSIONES ────────────────────────────────────────────────────
-/** Redondear a series comerciales (múltiplos de 50mm hasta 500, luego 100mm) */
 export function normalizeRect(a, b) {
   const round = x => {
     if (x <= 0.5)  return Math.ceil(x * 20) / 20;   // cada 50mm
@@ -269,26 +242,25 @@ export function normalizeCirc(D) {
 
 // ── SINGULARIDADES ────────────────────────────────────────────────────────────
 export const FITTINGS = [
-  { name: 'Codo 90° R/D=1.5',     zeta: 0.17 },
-  { name: 'Codo 90° R/D=1.0',     zeta: 0.33 },
-  { name: 'Codo 90° cuadrado',     zeta: 1.30 },
-  { name: 'Codo 45°',             zeta: 0.09 },
-  { name: 'Codo 30°',             zeta: 0.05 },
-  { name: 'Te rama (impulsión)',   zeta: 1.00 },
-  { name: 'Te paso (impulsión)',   zeta: 0.10 },
-  { name: 'Transición expan. 15°',zeta: 0.05 },
-  { name: 'Transición contrac.',   zeta: 0.10 },
-  { name: 'Entrada brusca',        zeta: 0.50 },
-  { name: 'Salida brusca',         zeta: 1.00 },
-  { name: 'Rejilla impulsión',     zeta: 2.50 },
-  { name: 'Rejilla retorno',       zeta: 1.50 },
-  { name: 'Filtro plano (limpio)', zeta: 0.50 },
+  { name: 'Codo 90° R/D=1.5',      zeta: 0.17 },
+  { name: 'Codo 90° R/D=1.0',      zeta: 0.33 },
+  { name: 'Codo 90° cuadrado',      zeta: 1.30 },
+  { name: 'Codo 45°',              zeta: 0.09 },
+  { name: 'Codo 30°',              zeta: 0.05 },
+  { name: 'Te rama (impulsión)',    zeta: 1.00 },
+  { name: 'Te paso (impulsión)',    zeta: 0.10 },
+  { name: 'Transición expan. 15°', zeta: 0.05 },
+  { name: 'Transición contrac.',    zeta: 0.10 },
+  { name: 'Entrada brusca',         zeta: 0.50 },
+  { name: 'Salida brusca',          zeta: 1.00 },
+  { name: 'Rejilla impulsión',      zeta: 2.50 },
+  { name: 'Rejilla retorno',        zeta: 1.50 },
+  { name: 'Filtro plano (limpio)',  zeta: 0.50 },
   { name: 'Filtro bolsas (limp.)', zeta: 0.80 },
-  { name: 'Batería de calor',      zeta: 1.50 },
-  { name: 'Amortiguador abierto',  zeta: 0.20 },
+  { name: 'Batería de calor',       zeta: 1.50 },
+  { name: 'Amortiguador abierto',   zeta: 0.20 },
 ];
 
-/** Pérdida de presión por singularidad: ΔP = ζ * rho * v² / 2 [Pa] */
 export function fittingLoss(zeta, v, rho = RHO_STD) {
   return zeta * rho * v * v / 2;
 }
@@ -321,9 +293,8 @@ export function calcTramo(tramo, R_target, eps, rho, nu) {
     geom.DhNorm = DhN; geom.RNorm = RN; geom.fNorm = fN;
   }
 
-  // Pérdidas
-  const dPfric = (geom.RNorm || geom.R_calc) * L;
-  const dPsing = (fittings || []).reduce((s, ft) => s + fittingLoss(ft.zeta, vref, rho), 0);
+  const dPfric  = (geom.RNorm || geom.R_calc) * L;
+  const dPsing  = (fittings || []).reduce((s, ft) => s + fittingLoss(ft.zeta, vref, rho), 0);
   const dPtotal = dPfric + dPsing;
 
   return { ...geom, dPfric, dPsing, dPtotal, L, Q, tipo };
@@ -338,12 +309,8 @@ export function calcRed(tramos, R_target, eps, rho, nu) {
 }
 
 // ── DIAGRAMA DE ABACO ─────────────────────────────────────────────────────────
-/**
- * Genera puntos para líneas iso-caudal en el ábaco D vs R
- * Eje X: R [Pa/m] (log), Eje Y: D [m] (log)
- */
 export function abacoLines(eps, rho, nu) {
-  const Q_vals = [0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,20]; // m³/s
+  const Q_vals  = [0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,20]; // m³/s
   const R_range = [];
   for (let i = -1; i <= 1.5; i += 0.05) R_range.push(Math.pow(10, i));
 
@@ -357,22 +324,19 @@ export function abacoLines(eps, rho, nu) {
   }));
 }
 
-/** Líneas iso-velocidad para el ábaco */
 export function abacoIsoVel(eps, rho, nu) {
-  const v_vals = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20];
+  const v_vals  = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20];
   const R_range = [];
   for (let i = -1; i <= 1.5; i += 0.05) R_range.push(Math.pow(10, i));
 
   return v_vals.map(v => ({
     v,
     pts: R_range.map(R => {
-      const res = sizeCircular(0.1, R, eps, rho, nu); // placeholder
-      // Para iso-v: D = f*rho*v²/(2R) con f iterado
       let D = 0.2, f = 0.02;
       for (let i = 0; i < 20; i++) {
         const Re = v * D / nu;
         f = frictionFactor(Re, eps / D);
-        const Dnew = Math.sqrt(f * rho * v * v / (2 * R));  // aprox
+        const Dnew = Math.sqrt(f * rho * v * v / (2 * R));
         if (Math.abs(Dnew - D) < 1e-5) { D = Dnew; break; }
         D = Dnew;
       }
