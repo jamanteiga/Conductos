@@ -2,11 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HVAC Naval Designer PRO</title>
-    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
@@ -14,116 +11,94 @@
 </head>
 <body class="win11-light">
 
-<div id="modalPin" class="overlay">
-    <div class="win-dialog">
-        <h3 data-i18n="login_title">🔐 Acceso Ingeniería</h3>
-        <input type="password" id="inputPin" placeholder="PIN" maxlength="4">
-        <button class="win-btn-primary" onclick="authManager.login()" data-i18n="btn_enter">Entrar</button>
-    </div>
-</div>
-
-<div id="modalProyecto" class="overlay" style="display:none;">
-    <div class="win-dialog">
-        <h3 data-i18n="project_title">🚢 Proyectos en la Nube</h3>
-        <div id="listaProyectosNube" class="win-list-container scroll-mini"></div>
-        <hr>
-        <div class="win-input-group">
-            <input type="text" id="p_buque" data-i18n-placeholder="ph_ship_name" placeholder="Nombre Buque">
-            <button class="win-btn-primary" onclick="proyectManager.crearNuevo()" data-i18n="btn_create">Crear Nuevo</button>
-        </div>
-    </div>
-</div>
-
 <header class="win-appbar">
     <div class="app-title"><b>HVAC Designer</b> | <span id="badge-buque">---</span></div>
-    <div class="app-controls">
-        <select id="langSelector" onchange="i18n.setLang(this.value)" class="lang-select">
-            <option value="es">ES</option>
-            <option value="gl">GL</option>
-            <option value="en">EN</option>
+    <div class="appbar-actions">
+        <select id="langSelector" onchange="i18n.change(this.value)">
+            <option value="es">Español</option>
+            <option value="en">English</option>
         </select>
+        <button class="win-btn-primary" onclick="dbManager.guardar()" style="background:#28a745">💾 GUARDAR PROYECTO</button>
+        <button class="win-btn-ghost" onclick="location.reload()">🔄 Cambiar Buque</button>
         <div id="status-sync" class="win-status"></div>
     </div>
 </header>
 
 <main>
+    <div id="modalPin" class="overlay"><div class="win-dialog"><h3>🔐 PIN de Acceso</h3><input type="password" id="inputPin" value="1201"><button onclick="authManager.login()">Entrar</button></div></div>
+    <div id="modalProyecto" class="overlay" style="display:none;"><div class="win-dialog"><h3>🚢 Proyectos</h3><div id="listaProyectosNube"></div><hr><input type="text" id="p_buque" placeholder="Nombre Buque"><button onclick="proyectManager.crearNuevo()">Crear Nuevo</button></div></div>
+
     <section id="page-lineas" class="page active">
         <div class="win-card">
-            <h4 data-i18n="cloud_sync">💾 Sincronización Nube</h4>
+            <h4>Registro de Líneas</h4>
             <div class="win-grid-2">
-                <button class="win-btn-primary" onclick="dbManager.guardar()" data-i18n="btn_save">GUARDAR CAMBIOS</button>
-                <button class="win-btn-secondary" onclick="dbManager.listarProyectos()" data-i18n="btn_refresh">Refrescar</button>
+                <input type="text" id="l_numero" placeholder="Nº Línea (ej. L01)">
+                <input type="text" id="l_servicio" placeholder="Servicio (ej. Extracción Cocinas)">
             </div>
-            <p id="db-log" class="log-text"></p>
-        </div>
-
-        <div class="win-card">
-            <h4 data-i18n="new_line">Nueva Línea de Servicio</h4>
-            <div class="win-grid-3">
-                <input type="text" id="l_bloque" data-i18n-placeholder="ph_block" placeholder="Bloque">
-                <input type="text" id="l_numero" data-i18n-placeholder="ph_line" placeholder="Nº Línea">
-                <input type="text" id="l_servicio" data-i18n-placeholder="ph_service" placeholder="Servicio">
-            </div>
-            <button class="win-btn-primary" style="margin-top:10px;" onclick="lineManager.nuevaLinea()" data-i18n="btn_add">+ Registrar Línea</button>
+            <button class="win-btn-primary" onclick="lineManager.nuevaLinea()">+ Registrar Línea</button>
         </div>
         <div id="listaLineas" class="win-list-container"></div>
     </section>
 
     <section id="page-red" class="page">
-        <div class="designer-layout">
-            <div class="win-card">
-                <h4 data-i18n="component_cfg">🛠 Configuración de Componente</h4>
-                <div class="win-grid-2">
-                    <div>
-                        <label data-i18n="label_hier">Jerarquía:</label>
-                        <select id="compJerarquia"></select>
-                    </div>
-                    <div>
-                        <label data-i18n="label_group">Grupo:</label>
-                        <select id="compGrupo" onchange="netManager.fillAccesorios()"></select>
-                    </div>
+        <div class="win-card">
+            <h4>🛠 Configuración de Componente</h4>
+            
+            <div class="win-grid-2">
+                <div>
+                    <label>Forma del Conducto</label>
+                    <select id="compForma" onchange="ui.toggleForma(this.value)">
+                        <option value="rectangular">Rectangular</option>
+                        <option value="circular">Circular / Spiro</option>
+                        <option value="oval">Ovalado</option>
+                    </select>
                 </div>
-
-                <label data-i18n="label_acc">Accesorio:</label>
-                <select id="compTipo"></select>
-
-                <div class="win-grid-2">
-                    <div><small>W (mm)</small><input type="number" id="compAncho" value="400"></div>
-                    <div><small>H (mm)</small><input type="number" id="compAlto" value="300"></div>
-                    <div><small>L (m)</small><input type="number" id="compL" step="0.1" value="1.0"></div>
-                    <div><small>Q (m³/h)</small><input type="number" id="compQ" value="1200"></div>
+                <div>
+                    <label>Jerarquía</label>
+                    <select id="compJerarquia">
+                        <option value="Principal">Principal</option>
+                        <option value="Ramal">Ramal</option>
+                        <option value="Derivación">Derivación</option>
+                    </select>
                 </div>
-
-                <label data-i18n="label_dir">Dirección Proyectada:</label>
-                <select id="compDir"></select>
-
-                <button class="win-btn-success" onclick="netManager.addNode()" data-i18n="btn_add_red">✅ AÑADIR A LA RED</button>
             </div>
 
-            <div class="win-tree-container">
-                <div id="treeContainer" class="win-tree"></div>
-                <button class="win-btn-danger" id="btnDelete" onclick="netManager.deleteNode()" style="display:none; width:100%; margin-top:10px;">🗑 Borrar Selección</button>
+            <label>Accesorio (Cátalogo K-Factor)</label>
+            <select id="compTipo" style="font-family: monospace;"></select>
+
+            <div id="dims-rectangular" class="win-grid-2">
+                <div><label>Ancho W (mm)</label><input type="number" id="compAncho" value="400"></div>
+                <div><label>Alto H (mm)</label><input type="number" id="compAlto" value="300"></div>
             </div>
+            
+            <div id="dims-circular" style="display:none;">
+                <label>Diámetro Ø (mm)</label><input type="number" id="compDiametro" value="250">
+            </div>
+
+            <div class="win-grid-2">
+                <div><label>Longitud L (mm)</label><input type="number" id="compL" value="1000"></div>
+                <div><label>Caudal Q (m³/h)</label><input type="number" id="compQ" value="1200"></div>
+            </div>
+
+            <label>Dirección Proyectada</label>
+            <select id="compDir"></select>
+
+            <button class="win-btn-success" onclick="netManager.addNode()" id="btnAddNode" style="width:100%; margin-top:10px; font-weight:bold;">✅ AÑADIR A LA RED</button>
         </div>
+        <div id="treeContainer" class="win-tree"></div>
     </section>
 
     <section id="page-visor" class="page page-full">
         <div id="container3d"></div>
-        <button class="win-btn-float" onclick="visor3D.resize()">📏</button>
     </section>
 </main>
 
 <nav class="win-taskbar">
-    <button onclick="ui.showPage('lineas')">📁 <span data-i18n="nav_lines">Líneas</span></button>
-    <button onclick="ui.showPage('red')">📐 <span data-i18n="nav_design">Diseño</span></button>
-    <button onclick="ui.showPage('visor')">🧊 <span data-i18n="nav_3d">Visor 3D</span></button>
+    <button onclick="ui.showPage('lineas')">📁 Líneas</button>
+    <button onclick="ui.showPage('red')">📐 Diseño</button>
+    <button onclick="ui.showPage('visor')">🧊 Visor 3D</button>
 </nav>
 
 <script src="app.js" type="module"></script>
-<script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js');
-    }
-</script>
 </body>
 </html>

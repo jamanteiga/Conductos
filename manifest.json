@@ -1,12 +1,11 @@
 {
   "name": "HVAC Naval Designer PRO",
-  "short_name": "HVAC Naval",
-  "description": "Herramienta profesional de diseño HVAC",
+  "short_name": "HVAC PRO",
+  "description": "Diseño de conductos navales en mm con sincronización Supabase",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#f3f3f3",
   "theme_color": "#0078d4",
-  "orientation": "any",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/1087/1087080.png",
