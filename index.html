@@ -2,58 +2,161 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-    <title>Conductos HVAC Pro</title>
-    <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .tree-node { margin-left: 20px; border-left: 2px dashed #ccc; padding-left: 10px; }
-        .type-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; margin-right: 5px; color: white; }
-        .tag-principal { background: #007aff; }
-        .tag-ramal { background: #5856d6; }
-        .tag-derivacion { background: #ff9500; }
-        .btn-hier { flex:1; padding: 10px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; color: white; }
-        .active-node { border: 2px solid #007aff !important; background: #f0f7ff; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>HVAC Naval Pro</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-<header class="hdr">
-  <div class="hdr-logo">🌬️ <span>HVAC Network</span></div>
-  <div class="hdr-r" id="hdrR">— Pa/m</div>
-</header>
-
-<div class="page active" data-page="red">
-  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:12px">
-    <button onclick="addJerarquia('principal')" class="btn-hier" style="background:#007aff">＋ Principal</button>
-    <button onclick="addJerarquia('ramal')" id="btnNewR" class="btn-hier" style="background:#5856d6">＋ Ramal</button>
-    <button onclick="addJerarquia('derivacion')" id="btnNewD" class="btn-hier" style="background:#ff9500">＋ Derivación</button>
-    <button onclick="clearRed()" style="background:#fff; color:#ff3b30; border:1px solid #ff3b30; border-radius:8px">✕ Limpiar</button>
-  </div>
-
-  <div id="redTreeView"></div>
-
-  <div class="sec">Accesorios (K/ζ)</div>
-  <div class="card">
-    <input type="text" id="searchFitting" placeholder="🔍 Buscar accesorio..." oninput="filterFittings(this.value)" style="margin-bottom:10px">
-    <div id="fittingsList" style="display:grid; grid-template-columns:1fr 1fr; gap:5px; max-height:200px; overflow-y:auto;">
+<div id="modalProyecto" class="overlay">
+    <div class="modal">
+        <h2>🚢 Nuevo Proyecto Naval</h2>
+        <div class="form-group">
+            <input type="text" id="p_buque" placeholder="Nombre del Buque (ej: NB-701)">
+            <input type="text" id="p_num_const" placeholder="Nº Construcción">
+            <input type="text" id="p_astillero" placeholder="Astillero">
+            <input type="text" id="p_cliente" placeholder="Cliente Final">
         </div>
-  </div>
-
-  <div class="sec">Resumen Crítico</div>
-  <div class="card">
-    <div class="rg">
-      <div class="rc"><div class="rl">ΔP Total Sistema</div><div class="rv" id="redDP" style="color:var(--rd)">0</div><div class="ru">Pa</div></div>
+        <button class="btn-main" onclick="proyectManager.crearNuevo()">Empezar Ingeniería</button>
     </div>
-  </div>
 </div>
 
-<nav class="nav">
-  <button class="nb" data-nav="calculo"><span>🔧</span></button>
-  <button class="nb active" data-nav="red"><span>🗺</span></button>
-  <button class="nb" data-nav="config"><span>⚙️</span></button>
+<header class="header-nav">
+    <div class="proj-badge">
+        <span id="badge-buque">PROYECTO</span>
+        <small id="badge-sistema">SISTEMA: 5101</small>
+    </div>
+    <div class="line-badge" id="active-line-name">Seleccione Línea</div>
+</header>
+
+<main>
+    <section id="page-lineas" class="page active">
+        <div class="section-header">
+            <h3>Líneas de Ventilación</h3>
+            <button class="btn-small" onclick="lineManager.nuevaLinea()">+ Nueva</button>
+        </div>
+        <div id="listaLineas" class="scroll-list">
+            </div>
+    </section>
+
+    <section id="page-red" class="page">
+        <div class="toolbar-red">
+            <button onclick="netManager.addNode('principal')">Pral (01-09)</button>
+            <button onclick="netManager.addNode('ramal')">Ramal (10-50)</button>
+            <button onclick="netManager.addNode('derivacion')">Deriv (51-99)</button>
+        </div>
+
+        <div id="treeContainer" class="tree-view"></div>
+
+        <div id="editPanel" class="panel-editor" style="display:none;">
+            <h4>Editor de Componente</h4>
+            <div class="grid-inputs">
+                <div class="input-item">
+                    <label>Bloque</label>
+                    <input type="text" id="nodeBloque" oninput="netManager.updateNode()">
+                </div>
+                <div class="input-item">
+                    <label>Dirección</label>
+                    <select id="nodeDir" onchange="netManager.updateNode()">
+                        <option value="X">PROA (X+)</option>
+                        <option value="-X">POPA (X-)</option>
+                        <option value="Y">BABOR (Y+)</option>
+                        <option value="-Y">ESTRIBOR (Y-)</option>
+                        <option value="Z">ARRIBA (Z+)</option>
+                        <option value="-Z">ABAJO (Z-)</option>
+                    </select>
+                </div>
+                <div class="input-item">
+                    <label>Ancho (mm)</label>
+                    <input type="number" id="nodeAncho" oninput="netManager.updateNode()">
+                </div>
+                <div class="input-item">
+                    <label>Alto (mm)</label>
+                    <input type="number" id="nodeAlto" oninput="netManager.updateNode()">
+                </div>
+                <div class="input-item">
+                    <label>Longitud (m)</label>
+                    <input type="number" id="nodeL" step="0.1" oninput="netManager.updateNode()">
+                </div>
+                <div class="input-item">
+                    <label>Caudal (m³/h)</label>
+                    <input type="number" id="nodeCaudal" oninput="netManager.updateNode()">
+                </div>
+            </div>
+            <div class="panel-actions">
+                <button class="btn-fitting" onclick="netManager.addFitting()">+ Añadir Codo/Accesorio</button>
+                <button class="btn-delete" onclick="netManager.deleteNode()">Eliminar</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="page-visor" class="page">
+        <div id="container3d"></div>
+        <div class="visor-controls">
+            <button onclick="visor3D.resetCamera()">Reset Cam</button>
+            <div class="legend">
+                <span class="dot red"></span> Ruta Crítica
+                <span class="dot blue"></span> Normal
+            </div>
+        </div>
+    </section>
+
+    <section id="page-calculo" class="page">
+        <div class="card-result">
+            <h3>Análisis de Presión</h3>
+            <div class="main-stat">
+                <span id="resPresion">0</span> <small>Pa</small>
+            </div>
+            <p>Ruta más desfavorable: <b id="resTagCritico">-</b></p>
+            <button class="btn-calc" onclick="netManager.analizarYOptimizar()">Calcular y Sugerir Mejoras</button>
+        </div>
+
+        <div id="panelSugerencias" class="suggestions-area"></div>
+
+        <div class="card-bom">
+            <h3>Cómputo de Materiales</h3>
+            <div id="resBOM">
+                <p>Metros totales: 0 m</p>
+                <p>Superficie chapa: 0 m²</p>
+                <p>Peso total: 0 kg</p>
+            </div>
+            <button class="btn-export" onclick="netManager.exportarPorBloques()">📦 Exportar Listados de Fabricación</button>
+        </div>
+    </section>
+</main>
+
+<nav class="tab-bar">
+    <button class="tab-btn active" onclick="ui.showPage('lineas', this)">
+        <i>📋</i><span>Líneas</span>
+    </button>
+    <button class="tab-btn" onclick="ui.showPage('red', this)">
+        <i>📐</i><span>Red</span>
+    </button>
+    <button class="tab-btn" onclick="ui.showPage('visor', this)">
+        <i>🧊</i><span>3D</span>
+    </button>
+    <button class="tab-btn" onclick="ui.showPage('calculo', this)">
+        <i>📊</i><span>Cálculo</span>
+    </button>
 </nav>
 
-<script type="module" src="js/app.js"></script>
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
+        });
+    }
+</script>
+
+<script src="app.js" type="module"></script>
 </body>
 </html>
