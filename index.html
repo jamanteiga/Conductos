@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>HVAC Naval Pro</title>
+    <title>HVAC Naval Pro v2</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
@@ -22,12 +22,12 @@
 
 <div id="modalProyecto" class="overlay" style="display:none;">
     <div class="modal">
-        <h2>🚢 Proyectos</h2>
-        <div id="listaProyectosNube" class="scroll-mini">Buscando en la nube...</div>
+        <h2>🚢 Gestión de Buques</h2>
+        <div id="listaProyectosNube" class="scroll-mini">Cargando base de datos...</div>
         <hr>
         <div class="nuevo-proy-box">
             <input type="text" id="p_buque" placeholder="Nombre del Buque (ej. NB-701)">
-            <button class="btn-main" onclick="proyectManager.crearNuevo()">CREAR NUEVO PROYECTO</button>
+            <button class="btn-main" onclick="proyectManager.crearNuevo()">NUEVO PROYECTO</button>
         </div>
     </div>
 </div>
@@ -39,42 +39,49 @@
 
 <main>
     <section id="page-lineas" class="page active">
-        <div class="section-header">
-            <h3>Líneas de Ventilación</h3>
-            <button class="btn-add" onclick="lineManager.nuevaLinea()">+</button>
+        <div class="form-linea">
+            <h3>Nueva Línea / Bloque</h3>
+            <div class="grid-inputs">
+                <input type="text" id="l_bloque" placeholder="Bloque (ej. 100)">
+                <input type="text" id="l_numero" placeholder="Nº Línea (ej. 01)">
+                <input type="text" id="l_servicio" placeholder="Servicio (ej. AC-01)">
+            </div>
+            <button class="btn-main" onclick="lineManager.nuevaLinea()">+ AÑADIR A LISTADO</button>
         </div>
+        <hr>
         <div id="listaLineas" class="scroll-list"></div>
     </section>
 
     <section id="page-red" class="page">
         <div class="toolbar-red">
-            <button onclick="netManager.addNode('recto')">+ Recto</button>
-            <button onclick="netManager.addNode('codo_90')">+ Codo</button>
-            <button onclick="netManager.addNode('te')">+ Te</button>
-            <button onclick="netManager.deleteNode()" class="btn-del">🗑️</button>
+            <button onclick="netManager.addNode('conducto')">+ Tramo</button>
+            <button onclick="netManager.addNode('codo_90_rc')">+ Codo</button>
+            <button onclick="netManager.addNode('te_derivacion')">+ Te</button>
+            <button onclick="netManager.deleteNode()" class="btn-del">🗑️ Borrar</button>
         </div>
+        
         <div id="treeContainer" class="tree-view"></div>
+        
         <div id="editPanel" class="panel-editor" style="display:none;">
             <div class="grid-inputs">
-                <select id="nodeTipoPieza" onchange="netManager.updateNode()">
-                    <option value="recto">Tramo Recto</option>
-                    <option value="codo_90">Codo 90°</option>
-                    <option value="codo_45">Codo 45°</option>
-                    <option value="te">Te / Derivación</option>
-                </select>
+                <label>Accesorio:</label>
+                <select id="nodeTipoPieza" onchange="netManager.updateNode()"></select>
+                
+                <label>Dirección:</label>
                 <select id="nodeDir" onchange="netManager.updateNode()">
                     <option value="X">PROA (+X)</option><option value="-X">POPA (-X)</option>
                     <option value="Y">BABOR (+Y)</option><option value="-Y">ESTRIBOR (-Y)</option>
                     <option value="Z">ARRIBA (+Z)</option><option value="-Z">ABAJO (-Z)</option>
                 </select>
-                <input type="number" id="nodeAncho" placeholder="Ancho (mm)" oninput="netManager.updateNode()">
+
+                <input type="number" id="nodeAncho" placeholder="Ancho/Ø (mm)" oninput="netManager.updateNode()">
                 <input type="number" id="nodeAlto" placeholder="Alto (mm)" oninput="netManager.updateNode()">
                 <input type="number" id="nodeL" step="0.1" placeholder="Long (m)" oninput="netManager.updateNode()">
                 <input type="number" id="nodeCaudal" placeholder="Q (m³/h)" oninput="netManager.updateNode()">
-                <select id="nodeForma" onchange="netManager.updateNode()">
-                    <option value="rectangular">Rectangular</option>
-                    <option value="circular">Circular</option>
-                </select>
+                
+                <button class="btn-exp" onclick="netManager.optimizarSeccion()" style="grid-column: span 2; background: #6200ee; color:white;">
+                    ✨ Optimizar Sección (V < 8m/s)
+                </button>
             </div>
             <div class="info-live">Vel: <b id="liveVel">0</b> m/s | Peso: <b id="liveWeight">0</b> kg</div>
         </div>
@@ -86,13 +93,12 @@
 
     <section id="page-calculo" class="page">
         <div class="card-result">
-            <h3>Presión Total Estática</h3>
+            <h3>Cálculo de Presión</h3>
             <div class="main-stat"><span id="resPresion">0</span> Pa</div>
             <div class="export-grid">
-                <button class="btn-exp" onclick="exportManager.toExcel()">EXCEL</button>
-                <button class="btn-exp btn-cad" onclick="exportManager.toCAD()">CAD (DXF)</button>
+                <button class="btn-exp" onclick="exportManager.toExcel()">REPORTE EXCEL</button>
+                <button class="btn-exp btn-cad" onclick="exportManager.toCAD()">EXPORTAR DXF</button>
             </div>
-            <button class="btn-calc" onclick="netManager.analizarYOptimizar()">CALCULAR SISTEMA</button>
         </div>
     </section>
 </main>
