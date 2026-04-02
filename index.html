@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>HVAC Naval Pro</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
@@ -16,45 +15,76 @@
 
 <div id="modalProyecto" class="overlay">
     <div class="modal">
-        <h2>🚢 Proyecto HVAC Naval</h2>
-        <input type="text" id="p_buque" placeholder="Nombre del Buque">
-        <input type="text" id="p_astillero" placeholder="Astillero">
-        <button class="btn-main" onclick="proyectManager.crearNuevo()">Empezar</button>
+        <h2>🚢 Gestión de Proyectos</h2>
+        <div id="selectorExistentes">
+            <p>Proyectos en la nube:</p>
+            <div id="listaProyectosNube" class="scroll-mini">Cargando...</div>
+        </div>
+        <hr>
+        <p>Nuevo Proyecto:</p>
+        <input type="text" id="p_buque" placeholder="Nombre del Buque (NB-700)">
+        <button class="btn-main" onclick="proyectManager.crearNuevo()">Crear Nuevo</button>
     </div>
 </div>
 
 <header class="header-nav">
     <div class="proj-badge"><span id="badge-buque">PROYECTO</span></div>
-    <div class="line-badge" id="active-line-name">Seleccione Línea</div>
+    <div id="active-line-name">Línea No Seleccionada</div>
 </header>
 
 <main>
     <section id="page-lineas" class="page active">
-        <div class="section-header"><h3>Líneas 5101</h3><button onclick="lineManager.nuevaLinea()">+</button></div>
+        <div class="section-header">
+            <h3>Líneas de Ventilación</h3>
+            <button class="btn-add" onclick="lineManager.nuevaLinea()">+</button>
+        </div>
         <div id="listaLineas" class="scroll-list"></div>
     </section>
 
     <section id="page-red" class="page">
         <div class="toolbar-red">
-            <button onclick="netManager.addNode('principal')">Pral</button>
-            <button onclick="netManager.addNode('ramal')">Ramal</button>
+            <button onclick="netManager.addNode('principal')">+ Pral</button>
+            <button onclick="netManager.addNode('ramal')">+ Ramal</button>
+            <button onclick="netManager.deleteNode()" class="btn-del-icon">🗑️</button>
         </div>
+        
         <div id="treeContainer" class="tree-view"></div>
+        
         <div id="editPanel" class="panel-editor" style="display:none;">
+            <div class="hab-toggle">
+                <input type="checkbox" id="nodeIsHab" onchange="netManager.updateNode()">
+                <label for="nodeIsHab">Zona de Habilitación (Máx 5m/s)</label>
+            </div>
             <div class="grid-inputs">
+                <div class="input-item"><label>Bloque</label><input type="text" id="nodeBloque" oninput="netManager.updateNode()"></div>
+                <div class="input-item"><label>Nivel</label><input type="text" id="nodeNivel" oninput="netManager.updateNode()"></div>
                 <div class="input-item">
                     <label>Forma</label>
                     <select id="nodeForma" onchange="netManager.updateNode()">
                         <option value="rectangular">Rectangular</option>
-                        <option value="circular">Circular (Ø)</option>
+                        <option value="circular">Circular</option>
                         <option value="oval">Ovalado</option>
                     </select>
                 </div>
-                <div class="input-item"><label>Bloque</label><input type="text" id="nodeBloque" oninput="netManager.updateNode()"></div>
+                <div class="input-item">
+                    <label>Dirección</label>
+                    <select id="nodeDir" onchange="netManager.updateNode()">
+                        <option value="X">PROA (+X)</option>
+                        <option value="-X">POPA (-X)</option>
+                        <option value="Y">BABOR (+Y)</option>
+                        <option value="-Y">ESTRIBOR (-Y)</option>
+                        <option value="Z">ARRIBA (+Z)</option>
+                        <option value="-Z">ABAJO (-Z)</option>
+                    </select>
+                </div>
                 <div class="input-item"><label>Ancho/Ø (mm)</label><input type="number" id="nodeAncho" oninput="netManager.updateNode()"></div>
                 <div class="input-item"><label>Alto (mm)</label><input type="number" id="nodeAlto" oninput="netManager.updateNode()"></div>
                 <div class="input-item"><label>Long (m)</label><input type="number" id="nodeL" step="0.1" oninput="netManager.updateNode()"></div>
-                <div class="input-item"><label>Caudal (m³/h)</label><input type="number" id="nodeCaudal" oninput="netManager.updateNode()"></div>
+                <div class="input-item"><label>Q (m³/h)</label><input type="number" id="nodeCaudal" oninput="netManager.updateNode()"></div>
+            </div>
+            <div class="info-live">
+                Velocidad: <b id="liveVel">0</b> m/s
+                <div id="velStatusText"></div>
             </div>
         </div>
     </section>
@@ -65,22 +95,15 @@
 
     <section id="page-calculo" class="page">
         <div class="card-result">
-            <h3>Presión Ventilador</h3>
+            <h3>Presión Total Requerida</h3>
             <div class="main-stat"><span id="resPresion">0</span> Pa</div>
             <button class="btn-calc" onclick="netManager.analizarYOptimizar()">CALCULAR RUTA CRÍTICA</button>
-            <button class="btn-sync" onclick="dbManager.guardarProyecto()">☁️ SINCRONIZAR NUBE</button>
+            <button class="btn-sync" onclick="dbManager.guardarProyecto()">☁️ GUARDAR CAMBIOS</button>
         </div>
-        <div class="card-bom" id="resBOM"></div>
     </section>
 </main>
 
 <nav class="tab-bar">
     <button onclick="ui.showPage('lineas', this)">📋</button>
     <button onclick="ui.showPage('red', this)">📐</button>
-    <button onclick="ui.showPage('visor', this)">🧊</button>
-    <button onclick="ui.showPage('calculo', this)">📊</button>
-</nav>
-
-<script src="app.js" type="module"></script>
-</body>
-</html>
+    <button onclick="ui.showPage('visor
