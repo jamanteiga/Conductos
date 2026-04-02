@@ -5,56 +5,64 @@
 }
 
 body { 
-    margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; 
-    height: 100vh; display: flex; flex-direction: column; overflow: hidden; 
-    background: var(--win-bg);
+    margin: 0; font-family: 'Segoe UI', sans-serif; 
+    height: 100vh; display: flex; flex-direction: column; 
+    overflow: hidden; background: var(--win-bg); 
 }
 
 .main-header { 
-    height: 40px; background: #fff; border-bottom: 2px solid var(--win-border); 
-    display: flex; align-items: center; justify-content: space-between; padding: 0 15px; font-size: 12px;
+    height: 45px; background: white; border-bottom: 2px solid var(--win-border); 
+    display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-size: 13px; 
 }
 
-.app-container { display: flex; flex: 1; height: calc(100vh - 90px); }
+.app-container { display: flex; flex: 1; height: calc(100vh - 95px); }
 
 /* SIDEBAR */
 .sidebar-config { 
-    width: 320px; border-right: 2px solid var(--win-border); 
-    padding: 15px; overflow-y: auto; background: #f9f9f9; 
+    width: 320px; background: #f9f9f9; border-right: 2px solid var(--win-border); 
+    padding: 20px; overflow-y: auto; 
 }
-.sidebar-config label { display: block; font-weight: bold; font-size: 11px; margin-top: 10px; color: #444; }
-.sidebar-config input, .sidebar-config select { width: 100%; padding: 5px; margin-top: 2px; border: 1px solid #ccc; }
+.sidebar-config h3 { margin-top: 0; font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+.sidebar-config label { display: block; font-weight: bold; font-size: 11px; margin-top: 12px; color: #444; }
+.sidebar-config select, .sidebar-config input { width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+
 .input-row { display: flex; gap: 10px; }
+.btn-add { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 20px; border-radius: 4px; }
 
-/* VISOR Y ZONA DATOS */
+/* VISOR ÁREA */
 .visor-area { flex: 1; display: flex; flex-direction: column; }
-#container3d { flex: 0 0 40%; background: #000; border-bottom: 2px solid var(--win-border); }
+#container3d { flex: 0 0 40%; background: #000; border-bottom: 2px solid var(--win-border); position: relative; }
 
+/* PANEL INFERIOR CON SCROLL */
 .selection-bar { 
-    flex: 1; background: #fff; padding: 15px; overflow-y: auto; /* SCROLL VERTICAL AQUÍ */
-    display: flex; flex-direction: column;
+    flex: 1; background: white; padding: 15px; 
+    display: flex; flex-direction: column; 
+    overflow: hidden; /* El scroll lo tendrá el grid interno */
 }
+
+.info-text { background: #e7f3ff; padding: 10px; border-radius: 4px; border-left: 4px solid #0078d4; font-size: 13px; margin-bottom: 10px; }
 
 .data-grid-pro { 
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
-    gap: 10px; margin-top: 10px; padding-bottom: 20px;
+    flex: 1; 
+    overflow-y: auto; /* SCROLL VERTICAL AQUÍ */
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
+    gap: 12px; 
+    padding-right: 10px;
 }
 
 .node-card-edit { 
-    padding: 10px; border: 1px solid #ddd; border-left: 4px solid var(--accent);
-    background: #fdfdfd; cursor: pointer; font-size: 12px;
+    padding: 12px; border: 1px solid #ddd; background: #fff; 
+    cursor: pointer; font-size: 12px; border-left: 4px solid var(--accent); 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-.node-card-edit:hover { background: #f0f7f0; }
+.node-card-edit:hover { background: #f0f7f0; border-color: var(--accent); }
+.node-card-edit.active { background: #e8f5e9; border-color: #1b5e20; }
 
-/* BOTONES */
-.btn-add { width: 100%; padding: 10px; background: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 15px; }
-.btn-import { background: #5b2c91; color: white; border: none; padding: 5px 10px; cursor: pointer; margin-right: 10px; }
-.btn-modify { background: #0078d4; color: white; border: none; padding: 10px 20px; cursor: pointer; }
-.btn-delete { background: #d13438; color: white; border: none; padding: 10px 20px; cursor: pointer; }
+.edit-actions { padding-top: 15px; display: flex; gap: 10px; border-top: 1px solid #eee; margin-top: 10px; }
+.btn-modify { background: #0078d4; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+.btn-delete { background: #d13438; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; }
 
-.main-footer { height: 50px; background: #ddd; border-top: 2px solid var(--win-border); display: flex; align-items: center; justify-content: space-between; padding: 0 15px; }
-.main-footer button { padding: 8px 15px; background: #fff; border: 1px solid #999; cursor: pointer; font-size: 12px; }
+.main-footer { height: 50px; background: #eee; border-top: 2px solid var(--win-border); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+.main-footer button { padding: 8px 15px; background: white; border: 1px solid #999; cursor: pointer; font-size: 12px; }
 .btn-exit { background: #d13438 !important; color: white; }
-
-.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.win-dialog { background: white; padding: 25px; border: 2px solid #333; width: 500px; max-height: 80vh; overflow-y: auto; }
