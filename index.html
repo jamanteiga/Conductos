@@ -2,114 +2,128 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>HVAC Naval Pro v2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>HVAC Naval Designer PRO</title>
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
+<body class="win11-light">
 
 <div id="modalPin" class="overlay">
-    <div class="modal">
-        <h2>🔒 Acceso Seguro</h2>
-        <input type="password" id="inputPin" placeholder="PIN" maxlength="4" style="text-align: center; font-size: 28px; letter-spacing: 10px;">
-        <button class="btn-main" onclick="authManager.login()">ENTRAR</button>
+    <div class="win-dialog">
+        <h3 data-i18n="login_title">🔐 Acceso Ingeniería</h3>
+        <input type="password" id="inputPin" placeholder="PIN" maxlength="4">
+        <button class="win-btn-primary" onclick="authManager.login()" data-i18n="btn_enter">Entrar</button>
     </div>
 </div>
 
 <div id="modalProyecto" class="overlay" style="display:none;">
-    <div class="modal">
-        <h2>🚢 Gestión de Buques</h2>
-        <div id="listaProyectosNube" class="scroll-mini">Cargando base de datos...</div>
+    <div class="win-dialog">
+        <h3 data-i18n="project_title">🚢 Proyectos en la Nube</h3>
+        <div id="listaProyectosNube" class="win-list-container scroll-mini"></div>
         <hr>
-        <div class="nuevo-proy-box">
-            <input type="text" id="p_buque" placeholder="Nombre del Buque (ej. NB-701)">
-            <button class="btn-main" onclick="proyectManager.crearNuevo()">NUEVO PROYECTO</button>
+        <div class="win-input-group">
+            <input type="text" id="p_buque" data-i18n-placeholder="ph_ship_name" placeholder="Nombre Buque">
+            <button class="win-btn-primary" onclick="proyectManager.crearNuevo()" data-i18n="btn_create">Crear Nuevo</button>
         </div>
     </div>
 </div>
 
-<header class="header-nav">
-    <div class="proj-badge"><span id="badge-buque">Sin Proyecto</span></div>
-    <div id="status-sync" class="status-dot"></div>
+<header class="win-appbar">
+    <div class="app-title"><b>HVAC Designer</b> | <span id="badge-buque">---</span></div>
+    <div class="app-controls">
+        <select id="langSelector" onchange="i18n.setLang(this.value)" class="lang-select">
+            <option value="es">ES</option>
+            <option value="gl">GL</option>
+            <option value="en">EN</option>
+        </select>
+        <div id="status-sync" class="win-status"></div>
+    </div>
 </header>
 
 <main>
     <section id="page-lineas" class="page active">
-        <div class="form-linea">
-            <h3>Nueva Línea / Bloque</h3>
-            <div class="grid-inputs">
-                <input type="text" id="l_bloque" placeholder="Bloque (ej. 100)">
-                <input type="text" id="l_numero" placeholder="Nº Línea (ej. 01)">
-                <input type="text" id="l_servicio" placeholder="Servicio (ej. AC-01)">
+        <div class="win-card">
+            <h4 data-i18n="cloud_sync">💾 Sincronización Nube</h4>
+            <div class="win-grid-2">
+                <button class="win-btn-primary" onclick="dbManager.guardar()" data-i18n="btn_save">GUARDAR CAMBIOS</button>
+                <button class="win-btn-secondary" onclick="dbManager.listarProyectos()" data-i18n="btn_refresh">Refrescar</button>
             </div>
-            <button class="btn-main" onclick="lineManager.nuevaLinea()">+ AÑADIR A LISTADO</button>
+            <p id="db-log" class="log-text"></p>
         </div>
-        <hr>
-        <div id="listaLineas" class="scroll-list"></div>
+
+        <div class="win-card">
+            <h4 data-i18n="new_line">Nueva Línea de Servicio</h4>
+            <div class="win-grid-3">
+                <input type="text" id="l_bloque" data-i18n-placeholder="ph_block" placeholder="Bloque">
+                <input type="text" id="l_numero" data-i18n-placeholder="ph_line" placeholder="Nº Línea">
+                <input type="text" id="l_servicio" data-i18n-placeholder="ph_service" placeholder="Servicio">
+            </div>
+            <button class="win-btn-primary" style="margin-top:10px;" onclick="lineManager.nuevaLinea()" data-i18n="btn_add">+ Registrar Línea</button>
+        </div>
+        <div id="listaLineas" class="win-list-container"></div>
     </section>
 
     <section id="page-red" class="page">
-        <div class="toolbar-red">
-            <button onclick="netManager.addNode('conducto')">+ Tramo</button>
-            <button onclick="netManager.addNode('codo_90_rc')">+ Codo</button>
-            <button onclick="netManager.addNode('te_derivacion')">+ Te</button>
-            <button onclick="netManager.deleteNode()" class="btn-del">🗑️ Borrar</button>
-        </div>
-        
-        <div id="treeContainer" class="tree-view"></div>
-        
-        <div id="editPanel" class="panel-editor" style="display:none;">
-            <div class="grid-inputs">
-                <label>Accesorio:</label>
-                <select id="nodeTipoPieza" onchange="netManager.updateNode()"></select>
-                
-                <label>Dirección:</label>
-                <select id="nodeDir" onchange="netManager.updateNode()">
-                    <option value="X">PROA (+X)</option><option value="-X">POPA (-X)</option>
-                    <option value="Y">BABOR (+Y)</option><option value="-Y">ESTRIBOR (-Y)</option>
-                    <option value="Z">ARRIBA (+Z)</option><option value="-Z">ABAJO (-Z)</option>
-                </select>
+        <div class="designer-layout">
+            <div class="win-card">
+                <h4 data-i18n="component_cfg">🛠 Configuración de Componente</h4>
+                <div class="win-grid-2">
+                    <div>
+                        <label data-i18n="label_hier">Jerarquía:</label>
+                        <select id="compJerarquia"></select>
+                    </div>
+                    <div>
+                        <label data-i18n="label_group">Grupo:</label>
+                        <select id="compGrupo" onchange="netManager.fillAccesorios()"></select>
+                    </div>
+                </div>
 
-                <input type="number" id="nodeAncho" placeholder="Ancho/Ø (mm)" oninput="netManager.updateNode()">
-                <input type="number" id="nodeAlto" placeholder="Alto (mm)" oninput="netManager.updateNode()">
-                <input type="number" id="nodeL" step="0.1" placeholder="Long (m)" oninput="netManager.updateNode()">
-                <input type="number" id="nodeCaudal" placeholder="Q (m³/h)" oninput="netManager.updateNode()">
-                
-                <button class="btn-exp" onclick="netManager.optimizarSeccion()" style="grid-column: span 2; background: #6200ee; color:white;">
-                    ✨ Optimizar Sección (V < 8m/s)
-                </button>
+                <label data-i18n="label_acc">Accesorio:</label>
+                <select id="compTipo"></select>
+
+                <div class="win-grid-2">
+                    <div><small>W (mm)</small><input type="number" id="compAncho" value="400"></div>
+                    <div><small>H (mm)</small><input type="number" id="compAlto" value="300"></div>
+                    <div><small>L (m)</small><input type="number" id="compL" step="0.1" value="1.0"></div>
+                    <div><small>Q (m³/h)</small><input type="number" id="compQ" value="1200"></div>
+                </div>
+
+                <label data-i18n="label_dir">Dirección Proyectada:</label>
+                <select id="compDir"></select>
+
+                <button class="win-btn-success" onclick="netManager.addNode()" data-i18n="btn_add_red">✅ AÑADIR A LA RED</button>
             </div>
-            <div class="info-live">Vel: <b id="liveVel">0</b> m/s | Peso: <b id="liveWeight">0</b> kg</div>
+
+            <div class="win-tree-container">
+                <div id="treeContainer" class="win-tree"></div>
+                <button class="win-btn-danger" id="btnDelete" onclick="netManager.deleteNode()" style="display:none; width:100%; margin-top:10px;">🗑 Borrar Selección</button>
+            </div>
         </div>
     </section>
 
-    <section id="page-visor" class="page">
+    <section id="page-visor" class="page page-full">
         <div id="container3d"></div>
-    </section>
-
-    <section id="page-calculo" class="page">
-        <div class="card-result">
-            <h3>Cálculo de Presión</h3>
-            <div class="main-stat"><span id="resPresion">0</span> Pa</div>
-            <div class="export-grid">
-                <button class="btn-exp" onclick="exportManager.toExcel()">REPORTE EXCEL</button>
-                <button class="btn-exp btn-cad" onclick="exportManager.toCAD()">EXPORTAR DXF</button>
-            </div>
-        </div>
+        <button class="win-btn-float" onclick="visor3D.resize()">📏</button>
     </section>
 </main>
 
-<nav class="tab-bar">
-    <button onclick="ui.showPage('lineas')">📋</button>
-    <button onclick="ui.showPage('red')">📐</button>
-    <button onclick="ui.showPage('visor')">🧊</button>
-    <button onclick="ui.showPage('calculo')">📊</button>
+<nav class="win-taskbar">
+    <button onclick="ui.showPage('lineas')">📁 <span data-i18n="nav_lines">Líneas</span></button>
+    <button onclick="ui.showPage('red')">📐 <span data-i18n="nav_design">Diseño</span></button>
+    <button onclick="ui.showPage('visor')">🧊 <span data-i18n="nav_3d">Visor 3D</span></button>
 </nav>
 
 <script src="app.js" type="module"></script>
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js');
+    }
+</script>
 </body>
 </html>

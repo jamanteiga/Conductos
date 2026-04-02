@@ -1,32 +1,97 @@
-:root { --blue: #007aff; --bg: #0a0a0a; --card: #1c1c1e; --red: #ff453a; }
-body { font-family: -apple-system, sans-serif; background: var(--bg); color: white; margin: 0; padding-top: 60px; }
+:root {
+    --win-blue: #0078d4;
+    --win-bg: #f3f3f3;
+    --win-card: #ffffff;
+    --win-border: #d1d1d1;
+    --win-text: #1a1a1a;
+    --win-success: #28a745;
+    --win-danger: #d13438;
+}
 
-.header-nav { position: fixed; top: 0; width: 100%; height: 55px; background: var(--card); display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid #333; z-index: 100; box-sizing: border-box; }
-.status-dot { width: 10px; height: 10px; border-radius: 50%; background: #444; }
+body.win11-light {
+    background-color: var(--win-bg);
+    color: var(--win-text);
+    font-family: "Segoe UI", -apple-system, sans-serif;
+    margin: 0;
+    overflow: hidden;
+    height: 100vh;
+}
 
-.page { display: none; padding: 15px; margin-bottom: 80px; }
+/* APPBAR */
+.win-appbar {
+    position: fixed; top: 0; width: 100%; height: 48px;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--win-border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 15px; box-sizing: border-box; z-index: 1000;
+}
+
+.app-controls { display: flex; align-items: center; gap: 10px; }
+.lang-select { background: none; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; padding: 2px; }
+.win-status { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
+
+/* LAYOUT */
+main { margin-top: 48px; height: calc(100vh - 103px); }
+.page { display: none; padding: 15px; height: 100%; overflow-y: auto; box-sizing: border-box; }
 .page.active { display: block; }
+.page-full { padding: 0 !important; overflow: hidden !important; }
 
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
-.modal { background: var(--card); padding: 25px; border-radius: 20px; width: 85%; max-width: 400px; text-align: center; border: 1px solid #333; }
+/* CARDS */
+.win-card {
+    background: var(--win-card);
+    border: 1px solid var(--win-border);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
 
-.card { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 10px; border-left: 4px solid var(--blue); cursor: pointer; }
-.node-card { background: #2c2c2e; padding: 12px; border-radius: 8px; margin-bottom: 6px; font-size: 13px; cursor: pointer; border: 1px solid transparent; }
-.node-card.active { border-color: var(--blue); background: #3a3a3c; }
+.win-card-linea {
+    background: #fff; border-left: 4px solid var(--win-blue);
+    padding: 12px; border-radius: 4px; margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer;
+}
 
-.panel-editor { background: var(--card); padding: 15px; border-radius: 15px; border: 1px solid #333; margin-top: 15px; }
-.grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+/* BOTONES */
+.win-btn-primary {
+    background: var(--win-blue); color: #fff; border: none;
+    padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: 600;
+}
+.win-btn-secondary { background: #fff; border: 1px solid #ccc; padding: 10px; border-radius: 4px; cursor: pointer; }
+.win-btn-success { background: var(--win-success); color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; }
+.win-btn-danger { background: var(--win-danger); color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; }
 
-input, select { background: #2c2c2e; color: white; border: 1px solid #444; padding: 10px; border-radius: 8px; width: 100%; box-sizing: border-box; }
+/* INPUTS */
+input, select {
+    width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;
+    margin-bottom: 10px; box-sizing: border-box; font-size: 14px;
+}
+label { display: block; font-size: 11px; font-weight: bold; margin-bottom: 3px; color: #666; }
 
-.tab-bar { position: fixed; bottom: 0; width: 100%; height: 65px; background: var(--card); display: flex; border-top: 1px solid #333; }
-.tab-bar button { flex: 1; background: none; border: none; color: #8e8e93; font-size: 24px; }
+.win-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.win-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-#container3d { width: 100%; height: 400px; border-radius: 12px; background: #000; overflow: hidden; }
-.btn-main { background: var(--blue); color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
-.btn-del { background: var(--red); color: white; border: none; border-radius: 6px; padding: 5px 10px; }
+/* TREE */
+.win-tree { background: #fff; border: 1px solid var(--win-border); border-radius: 4px; min-height: 200px; }
+.win-tree-item { padding: 10px; border-bottom: 1px solid #f0f0f0; cursor: pointer; font-size: 13px; }
+.win-tree-item.selected { background: #e0eef9; color: var(--win-blue); font-weight: bold; }
 
-.p-item { padding: 15px; background: #2c2c2e; margin-bottom: 8px; border-radius: 10px; text-align: left; }
-.info-live { font-size: 12px; text-align: center; color: #8e8e93; margin-top: 10px; padding: 8px; background: #000; border-radius: 8px; }
-.toolbar-red { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; }
-.toolbar-red button { background: #333; color: white; border: none; padding: 10px; border-radius: 8px; white-space: nowrap; }
+/* TASKBAR */
+.win-taskbar {
+    position: fixed; bottom: 0; width: 100%; height: 55px;
+    background: rgba(255,255,255,0.9); border-top: 1px solid var(--win-border);
+    display: flex; justify-content: space-around; align-items: center;
+}
+.win-taskbar button { background: none; border: none; color: #555; font-size: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
+
+/* MODALS */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(5px); }
+.win-dialog { background: #fff; padding: 25px; border-radius: 12px; width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+
+#container3d { width: 100%; height: 100%; touch-action: none; }
+.win-btn-float { position: absolute; bottom: 70px; right: 20px; width: 45px; height: 45px; border-radius: 50%; background: #fff; border: 1px solid #ccc; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 10; }
+
+@media (min-width: 768px) {
+    .designer-layout { display: grid; grid-template-columns: 350px 1fr; gap: 20px; }
+}
