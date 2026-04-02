@@ -1,18 +1,61 @@
-body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f3f3f3; height: 100vh; overflow: hidden; }
-.win-appbar { background: #fff; padding: 10px 20px; display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; }
-.page { display: none; padding: 20px; height: calc(100vh - 120px); overflow-y: auto; }
-.page.active { display: block; }
-.split-container { display: flex; gap: 15px; height: 100%; }
-.column-form { flex: 0 0 350px; }
-.column-visor { flex: 1; background: #fff; border: 1px solid #ccc; border-radius: 8px; }
-.win-card { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 10px; }
-.win-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.win-grid-3 { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 10px; }
-label { display: block; font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #666; }
-input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px; }
-.win-taskbar { position: fixed; bottom: 0; width: 100%; background: #eee; display: flex; justify-content: center; padding: 10px; border-top: 1px solid #ddd; }
-.win-taskbar button { margin: 0 10px; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; background: #fff; }
-.win-btn-primary { background: #0078d4; color: white; border: none; cursor: pointer; width: 100%; padding: 10px; }
-.win-btn-success { background: #107c10; color: white; border: none; cursor: pointer; padding: 10px; }
-.win-tree-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; background: #fafafa; }
-#canvas2D { height: 100%; background: #f9f9f9; }
+:root {
+    --win-bg: #f0f0f0;
+    --win-border: #828790;
+    --accent: #28a745;
+}
+
+body {
+    margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: var(--win-bg); height: 100vh; display: flex; flex-direction: column;
+}
+
+/* Cabecera */
+.main-header {
+    height: 40px; background: white; border-bottom: 2px solid var(--win-border);
+    display: flex; justify-content: space-between; align-items: center; padding: 0 15px;
+}
+
+/* Contenedor Principal */
+.app-container {
+    display: flex; flex: 1; overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar-config {
+    width: 300px; border-right: 2px solid var(--win-border); padding: 15px;
+    background: #fdfdfd; display: flex; flex-direction: column; gap: 10px;
+}
+
+.input-group { display: flex; flex-direction: column; }
+.input-row { display: flex; gap: 10px; }
+.input-row div { flex: 1; }
+
+label { font-size: 12px; font-weight: bold; margin-bottom: 2px; }
+select, input { padding: 5px; border: 1px solid var(--win-border); }
+
+.btn-add { 
+    margin-top: 10px; padding: 10px; background: var(--accent); 
+    color: white; border: none; font-weight: bold; cursor: pointer;
+}
+
+/* Visor */
+.visor-area { flex: 1; display: flex; flex-direction: column; background: #eee; }
+#container3d { flex: 1; position: relative; border: 1px solid #ccc; margin: 10px; background: #000; }
+.placeholder-text { color: white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+.selection-bar {
+    height: 60px; background: white; border-top: 2px solid var(--win-border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+}
+
+/* Footer */
+.main-footer {
+    height: 50px; background: #e1e1e1; border-top: 2px solid var(--win-border);
+    display: flex; justify-content: space-between; align-items: center; padding: 0 10px;
+}
+
+.main-footer button { 
+    padding: 6px 12px; margin: 0 2px; background: white; border: 1px solid #777; cursor: pointer;
+}
+
+.btn-exit { color: white; background: #d9534f !important; }

@@ -2,127 +2,104 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HVAC Naval Designer Pro</title>
+    <title>HVAC Marine Designer - Desktop Professional</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
-<body class="win11-light">
+<body>
 
-<header class="win-appbar">
-    <div class="app-title"><b>HVAC Naval Design</b> | <span id="badge-buque">---</span></div>
-    <div class="appbar-actions">
-        <select id="langSelector" onchange="i18n.change(this.value)">
-            <option value="es">Español</option>
-            <option value="en">English</option>
-        </select>
-        <button class="win-btn-save" onclick="dbManager.guardar()">💾 GUARDAR PROYECTO</button>
-        <div id="status-sync" class="win-status"></div>
+<header class="main-header">
+    <div class="project-info">
+        <span id="header-buque">PROYECTO: ---</span> | 
+        <span id="header-hull">HULL: ---</span> | 
+        <span id="header-bloque">BLOQUE: ---</span>
+    </div>
+    <div class="header-actions">
+        <button onclick="dbManager.guardar()">Guardar</button>
+        <select id="langSelector"><option>Idioma</option></select>
     </div>
 </header>
 
-<main>
-    <div id="modalPin" class="overlay"><div class="win-dialog"><h3>🔐 PIN Acceso</h3><input type="password" id="inputPin" value="1201"><button onclick="authManager.login()">Entrar</button></div></div>
-    
-    <div id="modalProyecto" class="overlay" style="display:none;"><div class="win-dialog"><h3>🚢 Proyectos en Nube</h3><div id="listaProyectosNube"></div><hr><input type="text" id="p_buque" placeholder="Nombre del Buque"><button onclick="proyectManager.crearNuevo()">Crear Nuevo</button></div></div>
-
-    <section id="page-proyecto" class="page">
-        <div class="win-card">
-            <h4>📋 Ficha Técnica del Buque</h4>
-            <div class="win-grid-2">
-                <div><label>Nombre del Buque</label><input type="text" id="info-buque" readonly></div>
-                <div><label>Nº Construcción (Hull No.)</label><input type="text" id="info-hull"></div>
-                <div><label>Armador (Owner)</label><input type="text" id="info-armador"></div>
-                <div><label>Astillero</label><input type="text" id="info-astillero"></div>
-                <div><label>Sociedad de Clase</label><input type="text" id="info-clase"></div>
-                <div><label>Normativa Aplicable</label><input type="text" id="info-norma" value="ISO 7547 / ISO 8861"></div>
-            </div>
+<div class="app-container">
+    <aside class="sidebar-config">
+        <h3>Configuración componente</h3>
+        
+        <div class="input-group">
+            <label>Jerarquía</label>
+            <select id="compJerarquia">
+                <option value="Principal">Conducto Principal</option>
+                <option value="Ramal">Ramal</option>
+                <option value="Derivación">Derivación</option>
+            </select>
         </div>
-    </section>
 
-    <section id="page-lineas" class="page">
-        <div class="win-card">
-            <h4>📁 Registro de Líneas de Servicio</h4>
-            <div class="win-grid-3">
-                <input type="text" id="l_bloque" placeholder="Bloque (ej. 102)">
-                <input type="text" id="l_numero" placeholder="Nº Línea (L001)">
-                <input type="text" id="l_servicio" placeholder="Servicio (ej. Suministro Acomodación)">
-            </div>
-            <button class="win-btn-primary" onclick="lineManager.nuevaLinea()">+ Registrar Línea</button>
+        <div class="input-group">
+            <label>Tipo conducto</label>
+            <select id="compForma" onchange="ui.toggleForma(this.value)">
+                <option value="rectangular">Rectangular</option>
+                <option value="circular">Circular</option>
+                <option value="oval">Oval</option>
+            </select>
         </div>
-        <div id="listaLineas" class="win-list-container"></div>
-    </section>
 
-    <section id="page-red" class="page active">
-        <div class="split-container">
-            <div class="column-form">
-                <div class="win-card">
-                    <h4>📐 Definición de Componente</h4>
-                    <label>Geometría</label>
-                    <select id="compForma" onchange="ui.toggleForma(this.value)">
-                        <option value="rectangular">Rectangular</option>
-                        <option value="circular">Circular</option>
-                        <option value="oval">Ovalado</option>
-                    </select>
+        <div class="input-group">
+            <label>Accesorio</label>
+            <select id="compTipo"></select> </div>
 
-                    <div class="win-grid-2">
-                        <div><label>Jerarquía</label><select id="compJerarquia"></select></div>
-                        <div><label>Categoría</label><select id="compGrupo" onchange="ui.fillAccesorios()"></select></div>
-                    </div>
-
-                    <label>Accesorio (Cátalogo K)</label>
-                    <select id="compTipo"></select>
-
-                    <div id="dims-rectangular" class="win-grid-2">
-                        <div><label>W (mm)</label><input type="number" id="compAncho" value="400"></div>
-                        <div><label>H (mm)</label><input type="number" id="compAlto" value="300"></div>
-                    </div>
-                    <div id="dims-circular" style="display:none;">
-                        <label>Ø (mm)</label><input type="number" id="compDiametro" value="250">
-                    </div>
-
-                    <div class="win-grid-2">
-                        <div><label>L (mm)</label><input type="number" id="compL" value="1000"></div>
-                        <div><label>Q (m³/h)</label><input type="number" id="compQ" value="1200"></div>
-                    </div>
-
-                    <label>Dirección Proyectada</label>
-                    <select id="compDir"></select>
-
-                    <button class="win-btn-success" onclick="netManager.addNode()">✅ AÑADIR A LA RED</button>
-                </div>
-                
-                <div class="win-card" style="margin-top:10px;">
-                    <h4>📋 Lista de Materiales (LOM)</h4>
-                    <div id="treeContainer"></div>
-                </div>
-            </div>
-
-            <div class="column-visor">
-                <div class="win-card visor-container">
-                    <div class="visor-header">
-                        <h4>🔍 Esquema 2D Planta</h4>
-                        <button onclick="visor2D.limpiar()" class="win-btn-ghost">Reset</button>
-                    </div>
-                    <div id="canvas2D"></div>
-                </div>
-            </div>
+        <div id="dims-rect" class="input-row">
+            <div><label>W (mm)</label><input type="number" id="compW" value="400"></div>
+            <div><label>H (mm)</label><input type="number" id="compH" value="300"></div>
         </div>
-    </section>
 
-    <section id="page-visor" class="page page-full">
-        <div id="container3d"></div>
-    </section>
-</main>
+        <div id="dims-circ" class="input-row" style="display:none">
+            <div><label>Ø (mm)</label><input type="number" id="compD" value="250"></div>
+        </div>
 
-<nav class="win-taskbar">
-    <button onclick="ui.showPage('proyecto')">📋 Proyecto</button>
-    <button onclick="ui.showPage('lineas')">📁 Líneas</button>
-    <button onclick="ui.showPage('red')">📐 Diseño</button>
-    <button onclick="ui.showPage('visor')">🧊 3D</button>
-</nav>
+        <div class="input-row">
+            <div><label>L (m)</label><input type="number" id="compL" step="0.1" value="1.0"></div>
+            <div><label>Caudal (m³/h)</label><input type="number" id="compQ" value="1200"></div>
+        </div>
+
+        <div class="input-group">
+            <label>Dirección proyectada</label>
+            <select id="compDir">
+                <option value="X">PROA (+X)</option>
+                <option value="-X">POPA (-X)</option>
+                <option value="Y">BABOR (+Y)</option>
+                <option value="-Y">ESTRIBOR (-Y)</option>
+                <option value="Z">ARRIBA (+Z)</option>
+                <option value="-Z">ABAJO (-Z)</option>
+            </select>
+        </div>
+
+        <button class="btn-add" onclick="netManager.addNode()">Añadir a la red</button>
+    </aside>
+
+    <main class="visor-area">
+        <div id="container3d">
+            <div class="placeholder-text">Visor 3D</div>
+        </div>
+        
+        <div class="selection-bar">
+            <div id="selected-data">datos de linea/ramal derivación o accesorio</div>
+            <button class="btn-modify">Modificar</button>
+        </div>
+    </main>
+</div>
+
+<footer class="main-footer">
+    <div class="footer-left">
+        <button onclick="ui.showSection('diseno')">Datos diseño</button>
+        <button onclick="ui.showSection('lineas')">Lineas</button>
+        <button onclick="ui.showSection('visor')">Visor 3D</button>
+    </div>
+    <div class="footer-right">
+        <button>Exportación 3D</button>
+        <button onclick="proyectManager.cambiar()">Cambiar proyecto</button>
+        <button class="btn-exit">Salir</button>
+    </div>
+</footer>
 
 <script src="app.js" type="module"></script>
 </body>
